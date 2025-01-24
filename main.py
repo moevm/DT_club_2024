@@ -84,6 +84,7 @@ def realistic_move(action):
     return action
 
 
+
 RENDER_PARAMS = ['human', 'top_down']
 def update(dt):
     """
@@ -114,8 +115,15 @@ def update(dt):
         action *= 1.5
 
     obs, reward, done, info = env.step(action)
+    print(obs)
     print("step_count = %s, reward=%.3f" % (env.unwrapped.step_count, reward))
     print("bot position = ", env.cur_pos)
+    print("done =", done)
+    print("info =", info)
+
+    # if done:
+    #     env.reset()
+    #     env.render()
 
     env.render(RENDER_PARAMS[1])
 
