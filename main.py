@@ -90,28 +90,19 @@ def update(dt):
     This function is called at every frame to handle
     movement/stepping and redrawing
     """
-    count = 0
 
     action = np.array([0.0, 0.0])
     UP_DOWN_MOVE = [0.44, 0.0] 
     RIGHT_LEFT_MOVE = [0, 1]
     NO_MOVE = [0, 0]
 
-    if key_handler[key.UP]:
+    if key_handler[key.UP] or key_handler[key.W]:
         action += np.array(UP_DOWN_MOVE)
-    if key_handler[key.DOWN]:
+    if key_handler[key.DOWN] or key_handler[key.S]: 
         action -= np.array(UP_DOWN_MOVE)
-    if key_handler[key.LEFT]:
+    if key_handler[key.LEFT] or key_handler[key.A]:
         action += np.array(RIGHT_LEFT_MOVE)
-    if key_handler[key.RIGHT]:
-        action -= np.array(RIGHT_LEFT_MOVE)
-    if key_handler[key.W]:
-        action += np.array(UP_DOWN_MOVE)
-    if key_handler[key.S]:
-        action -= np.array(UP_DOWN_MOVE)
-    if key_handler[key.A]:
-        action += np.array(RIGHT_LEFT_MOVE)
-    if key_handler[key.D]:
+    if key_handler[key.RIGHT] or key_handler[key.D]:
         action -= np.array(RIGHT_LEFT_MOVE)
     if key_handler[key.SPACE]:
         action = np.array(NO_MOVE)
@@ -130,14 +121,6 @@ def update(dt):
     print("bot position = ", env.cur_pos)
 
     env.render(RENDER_PARAMS[1])
-
-    if key_handler[key.TAB]:
-        count += 1
-        if count % 2 == 0: 
-            env.render(RENDER_PARAMS[1]) 
-            count = 0
-        else: 
-            env.render(RENDER_PARAMS[0])
 
 pyglet.clock.schedule_interval(update, 1.0 / env.unwrapped.frame_rate)
 
