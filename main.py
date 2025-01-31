@@ -10,12 +10,6 @@ from pyglet.window import key
 
 from gym_duckietown.envs import DuckietownEnv
 
-CONST_RT_MOVE = [0, 1]
-CONST_DN_MOVE = [0.44, 0]
-CONST_STOP_MOVE = [0, 0]
-CONST_LT_MOVE = [0, 1]
-CONST_UP_MOVE= [0.44, 0]
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--env-name", default="Duckietown-udem1-v0")
 parser.add_argument("--map-name", default="udem1")
@@ -28,6 +22,11 @@ parser.add_argument("--dynamics_rand", action="store_true", help="enable dynamic
 parser.add_argument("--frame-skip", default=1, type=int, help="number of frames to skip")
 parser.add_argument("--seed", default=42, type=int, help="seed")
 args = parser.parse_args()
+
+CONST_UP_DN_MOVE= [0.44, 0]
+CONST_LT_MOVE = [0, 1]
+CONST_RT_MOVE = [0, 1]
+CONST_STOP_MOVE = [0, 0]
 
 if args.env_name and args.env_name.find("Duckietown") != -1:
     env = DuckietownEnv(
@@ -55,6 +54,16 @@ def on_key_press(symbol, modifiers):
     control the simulation
     """
 
+    # RENDER_MODE SWITCH
+
+    global RENDER_MODE
+    
+    if key_handler[key.TAB]:
+        if RENDER_MODE == RENDER_PARAMS[0]:
+            RENDER_MODE = RENDER_PARAMS[1]
+        else:
+            RENDER_MODE = RENDER_PARAMS[0]
+    
     if symbol == key.BACKSPACE or symbol == key.SLASH:
         print("RESET")
         env.reset()
@@ -91,8 +100,7 @@ def realistic_move(action):
 
 
 RENDER_PARAMS = ['human', 'top_down']
-
-RENDER_MODE = 'top_down'
+RENDER_MODE = RENDER_PARAMS[1]
 
 def update(dt):
     """
@@ -102,48 +110,29 @@ def update(dt):
 
     action = np.array([0.0, 0.0])
 
-    # Moovement on keys W A S D
+    # Moovement
 
-    if key_handler[key.W]:
-        action += np.array(CONST_UP_MOVE)
-    if key_handler[key.S]:
-        action -= np.array(CONST_DN_MOVE)
-    if key_handler[key.A]:
+    if key_handler[key.UP] or key_handler[key.W]:
+        action += np.array(CONST_UP_DN_MOVE)
+    if key_handler[key.DOWN] or key_handler[key.S]:
+        action -= np.array(CONST_UP_DN_MOVE)
+    if key_handler[key.LEFT] or key_handler[key.A]:
         action += np.array(CONST_LT_MOVE)
-    if key_handler[key.D]:
-        action -= np.array(CONST_RT_MOVE)
-
-    if key_handler[key.UP]:
-        action += np.array(CONST_UP_MOVE)
-    if key_handler[key.DOWN]:
-        action -= np.array(CONST_DN_MOVE)
-    if key_handler[key.LEFT]:
-        action += np.array(CONST_LT_MOVE)
-    if key_handler[key.RIGHT]:
+    if key_handler[key.RIGHT] or key_handler[key.D]: 
         action -= np.array(CONST_RT_MOVE)
     if key_handler[key.SPACE]:
         action = np.array(CONST_STOP_MOVE)
 
-
+    
     """
     Here you can set the movement for the duckiebot using action
     """
     
     action = realistic_move(action)
-    
+
     # Speed boost
     if key_handler[key.LSHIFT]:
         action *= 1.5
-    
-    # RENDER_MODE SWITCH
-
-    global RENDER_MODE
-    
-    if key_handler[key.TAB]:
-        if RENDER_MODE == RENDER_PARAMS[0]:
-            RENDER_MODE = RENDER_PARAMS[1]
-        else:
-            RENDER_MODE = RENDER_PARAMS[0]
 
     obs, reward, done, info = env.step(action)
     print("step_count = %s, reward=%.3f" % (env.unwrapped.step_count, reward))
