@@ -23,9 +23,9 @@ parser.add_argument("--frame-skip", default=1, type=int, help="number of frames 
 parser.add_argument("--seed", default=42, type=int, help="seed")
 args = parser.parse_args()
 
+CONST_UP_DN_MOVE= [0.44, 0]
 CONST_LT_MOVE = [0, 1]
 CONST_RT_MOVE = [0, 1]
-CONST_UP_DN_MOVE= [0.44, 0]
 CONST_STOP_MOVE = [0, 0]
 
 if args.env_name and args.env_name.find("Duckietown") != -1:
@@ -52,16 +52,7 @@ def on_key_press(symbol, modifiers):
     """
     This handler processes keyboard commands that
     control the simulation
-    """   
-    if symbol == key.BACKSPACE or symbol == key.SLASH:
-        print("RESET")
-        env.reset()
-        env.render()
-    elif symbol == key.PAGEUP:
-        env.unwrapped.cam_angle[0] = 0
-    elif symbol == key.ESCAPE:
-        env.close()
-        sys.exit(0)
+    """
 
     # RENDER_MODE SWITCH
 
@@ -72,6 +63,16 @@ def on_key_press(symbol, modifiers):
             RENDER_MODE = RENDER_PARAMS[1]
         else:
             RENDER_MODE = RENDER_PARAMS[0]
+    
+    if symbol == key.BACKSPACE or symbol == key.SLASH:
+        print("RESET")
+        env.reset()
+        env.render()
+    elif symbol == key.PAGEUP:
+        env.unwrapped.cam_angle[0] = 0
+    elif symbol == key.ESCAPE:
+        env.close()
+        sys.exit(0)
 
 
 # Register a keyboard handler
