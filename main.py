@@ -41,7 +41,7 @@ else:
     env = gym.make(args.env_name)
 
 env.reset()
-current_render_mode = 0
+camera_view = 0
 env.render()
 
 
@@ -53,6 +53,8 @@ def on_key_press(symbol, modifiers):
     control the simulation
     """
 
+    global camera_view
+
     if symbol == key.BACKSPACE or symbol == key.SLASH:
         print("RESET")
         env.reset()
@@ -60,8 +62,8 @@ def on_key_press(symbol, modifiers):
     elif symbol == key.PAGEUP:
         env.unwrapped.cam_angle[0] = 0
     elif symbol == key.TAB:  
-        current_render_mode = 1 - current_render_mode  
-        env.render(RENDER_PARAMS[current_render_mode])  
+        camera_view = 1 - camera_view  
+        env.render(RENDER_PARAMS[camera_view])  
     elif symbol == key.ESCAPE:
         env.close()
         sys.exit(0)
@@ -127,10 +129,12 @@ def update(dt):
     print("step_count = %s, reward=%.3f" % (env.unwrapped.step_count, reward))
     print("bot position = ", env.cur_pos)
 
+    env.render(RENDER_PARAMS[camera_view])  
+
 
 pyglet.clock.schedule_interval(update, 1.0 / env.unwrapped.frame_rate)
 
-# Enter main event loop
+
 pyglet.app.run()
 
 env.close()
