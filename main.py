@@ -10,6 +10,11 @@ from pyglet.window import key
 
 from gym_duckietown.envs import DuckietownEnv
 
+CONST_UP_DN_MOVE= [0.44, 0]
+CONST_LT_MOVE = [0, 1]
+CONST_RT_MOVE = [0, 1]
+CONST_STOP_MOVE = [0, 0]
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--env-name", default="Duckietown-udem1-v0")
 parser.add_argument("--map-name", default="udem1")
@@ -49,6 +54,15 @@ def on_key_press(symbol, modifiers):
     control the simulation
     """
 
+    # RENDER_MODE SWITCH
+
+    global RENDER_MODE
+    
+    if key_handler[key.TAB]:
+        if RENDER_MODE == RENDER_PARAMS[0]:
+            RENDER_MODE = RENDER_PARAMS[1]
+        else:
+            RENDER_MODE = RENDER_PARAMS[0]
     if symbol == key.BACKSPACE or symbol == key.SLASH:
         print("RESET")
         env.reset()
@@ -85,6 +99,7 @@ def realistic_move(action):
 
 
 RENDER_PARAMS = ['human', 'top_down']
+RENDER_MODE = RENDER_PARAMS[1]
 def update(dt):
     """
     This function is called at every frame to handle
@@ -93,16 +108,18 @@ def update(dt):
 
     action = np.array([0.0, 0.0])
 
-    if key_handler[key.UP]:
-        action += np.array([0.44, 0.0])
-    if key_handler[key.DOWN]:
-        action -= np.array([0.44, 0])
-    if key_handler[key.LEFT]:
-        action += np.array([0, 1])
-    if key_handler[key.RIGHT]:
-        action -= np.array([0, 1])
+    # Moovement
+
+    if key_handler[key.UP] or key_handler[key.W]:
+        action += np.array(CONST_UP_DN_MOVE)
+    if key_handler[key.DOWN] or key_handler[key.S]:
+        action -= np.array(CONST_UP_DN_MOVE)
+    if key_handler[key.LEFT] or key_handler[key.A]:
+        action += np.array(CONST_LT_MOVE)
+    if key_handler[key.RIGHT] or key_handler[key.D]: 
+        action -= np.array(CONST_RT_MOVE)
     if key_handler[key.SPACE]:
-        action = np.array([0, 0])
+        action = np.array(CONST_STOP_MOVE)
 
     """
     Here you can set the movement for the duckiebot using action
@@ -117,7 +134,7 @@ def update(dt):
     print("step_count = %s, reward=%.3f" % (env.unwrapped.step_count, reward))
     print("bot position = ", env.cur_pos)
 
-    env.render(RENDER_PARAMS[1])
+    env.render(RENDER_MODE)
 
 
 pyglet.clock.schedule_interval(update, 1.0 / env.unwrapped.frame_rate)
