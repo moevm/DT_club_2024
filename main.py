@@ -11,8 +11,7 @@ from pyglet.window import key
 from gym_duckietown.envs import DuckietownEnv
 
 CONST_UP_DN_MOVE= [0.44, 0]
-CONST_LT_MOVE = [0, 1]
-CONST_RT_MOVE = [0, 1]
+CONST_LT_RT_MOVE = [0, 1]
 CONST_STOP_MOVE = [0, 0]
 
 parser = argparse.ArgumentParser()
@@ -115,11 +114,19 @@ def update(dt):
     if key_handler[key.DOWN] or key_handler[key.S]:
         action -= np.array(CONST_UP_DN_MOVE)
     if key_handler[key.LEFT] or key_handler[key.A]:
-        action += np.array(CONST_LT_MOVE)
+        action += np.array(CONST_LT_RT_MOVE)
     if key_handler[key.RIGHT] or key_handler[key.D]: 
-        action -= np.array(CONST_RT_MOVE)
+        action -= np.array(CONST_LT_RT_MOVE)
     if key_handler[key.SPACE]:
         action = np.array(CONST_STOP_MOVE)
+    if key_handler[key.L]: 
+        action = move_left(env.cur_angle)
+    if key_handler[key.R]: 
+        action = move_right(env.cur_angle)
+    if key_handler[key.U]: 
+        action = move_up(env.cur_angle)
+    if key_handler[key.B]: 
+        action = move_down(env.cur_angle)
 
     """
     Here you can set the movement for the duckiebot using action
@@ -136,6 +143,69 @@ def update(dt):
 
     env.render(RENDER_MODE)
 
+''' Метод для движения бота налево
+Логика у работы метода следующая:
+1) Если бот не смотрит налево, то нужно это исправить и повернуть его влево
+2) Если бот смотрит влево в пределах некоторой погрешности, то его движение должно быть строго вперед''' 
+def move_left(current_angle):
+    action = [0, 0]
+    delta = 3 # in degree
+   	 
+    angle_deg = np.rad2deg(current_angle)
+    if (angle_deg > 0 and np.abs(angle_deg - 180) < delta) or (angle_deg < 0 and np.abs(angle_deg + 180) < delta):
+        action = np.array(CONST_UP_DN_MOVE)
+    else:
+        if angle_deg >= 0: 
+            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+        else: 
+            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+   	 
+    return action
+
+def move_right(current_angle):
+    action = [0, 0]
+    delta = 3 # in degree
+   	 
+    angle_deg = np.rad2deg(current_angle)
+    if np.abs(angle_deg) <= delta:
+        action = np.array(CONST_UP_DN_MOVE)
+    else:
+        if angle_deg > 0: 
+            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+        else: 
+            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+   	 
+    return action
+
+def move_up(current_angle):
+    action = [0, 0]
+    delta = 3 # in degree
+   	 
+    angle_deg = np.rad2deg(current_angle)
+    if np.abs(angle_deg - 90) <= delta:
+        action = np.array(CONST_UP_DN_MOVE)
+    else:
+        if np.abs(angle_deg) > 90:
+            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+        else: 
+            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+   	 
+    return action
+
+def move_down(current_angle):
+    action = [0, 0]
+    delta = 3 # in degree
+   	 
+    angle_deg = np.rad2deg(current_angle)
+    if np.abs(angle_deg + 90) <= delta:
+        action = np.array(CONST_UP_DN_MOVE)
+    else:
+        if np.abs(angle_deg) > 90:
+            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+        else: 
+            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+   	 
+    return action
 
 pyglet.clock.schedule_interval(update, 1.0 / env.unwrapped.frame_rate)
 
