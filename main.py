@@ -143,17 +143,6 @@ def update(dt):
 
     env.render(RENDER_MODE)
 
-def move_left(current_angle):
-    action = [0, 0]
-    delta = 3 # in degree
-   	 
-    angle_deg = np.rad2deg(current_angle)
-    if (angle_deg > 0 and np.abs(angle_deg - 180) < delta) or (angle_deg < 0 and np.abs(angle_deg + 180) < delta):
-        action = np.array(DOWN_UP_MOVE)
-    else:
-        action = np.array([0, RIGHT_LEFT_MOVE[1] / 2])
-   	 
-    return action
 
 def move_left(current_angle):
     action = [0, 0]
