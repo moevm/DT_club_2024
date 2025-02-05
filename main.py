@@ -143,21 +143,26 @@ def update(dt):
 
     env.render(RENDER_MODE)
 
-''' Метод для движения бота налево
-Логика у работы метода следующая:
-1) Если бот не смотрит налево, то нужно это исправить и повернуть его влево
-2) Если бот смотрит влево в пределах некоторой погрешности, то его движение должно быть строго вперед''' 
+
 def move_left(current_angle):
+    '''Method for moving the bot to the left
+    The logic of the method:
+    1) If the bot does not look to the left, then you need to fix this and turn it to the left
+    2) If the bot looks to the left within a certain error, then its movement should be forward''' 
+
     action = [0, 0]
     delta = 3 # in degree
    	 
     angle_deg = np.rad2deg(current_angle)
     if (angle_deg > 0 and np.abs(angle_deg - 180) < delta) or (angle_deg < 0 and np.abs(angle_deg + 180) < delta):
+        # If the angle within the delta is 180 or -180 degrees 
         action = np.array(CONST_UP_DN_MOVE)
     else:
         if angle_deg >= 0: 
+            # If the bot's rotation angle is positive, then it is easier to turn it with a left turn.
             action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
         else: 
+            # If the bot's rotation angle is negative, then it is easier to turn it with a right turn.
             action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
    	 
     return action
