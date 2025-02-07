@@ -173,11 +173,14 @@ def move_right(current_angle):
    	 
     angle_deg = np.rad2deg(current_angle)
     if np.abs(angle_deg) <= delta:
+         # If the angle within the delta is 0 degrees
         action = np.array(CONST_UP_DN_MOVE)
     else:
         if angle_deg > 0: 
+            # If the bot's rotation angle is positive, then it is easier to turn it with a right turn.
             action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
         else: 
+            # If the bot's rotation angle is negative, then it is easier to turn it with a left turn. 
             action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
    	 
     return action
@@ -188,11 +191,14 @@ def move_up(current_angle):
    	 
     angle_deg = np.rad2deg(current_angle)
     if np.abs(angle_deg - 90) <= delta:
+        # If the angle within the delta is 90 degrees 
         action = np.array(CONST_UP_DN_MOVE)
     else:
-        if np.abs(angle_deg) > 90:
+        if np.abs(angle_deg) > 90: 
+            # If the bot's rotation angle module is greater than 90 degrees, then it is easier to turn it with a right turn.
             action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
         else: 
+            # If the bot's rotation angle module is less than 90 degrees, then it is easier to turn it with a left turn. 
             action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
    	 
     return action
@@ -203,11 +209,14 @@ def move_down(current_angle):
    	 
     angle_deg = np.rad2deg(current_angle)
     if np.abs(angle_deg + 90) <= delta:
+        # If the angle within the delta is -90 degrees
         action = np.array(CONST_UP_DN_MOVE)
     else:
         if np.abs(angle_deg) > 90:
+            # If the bot's rotation angle module is greater than 90 degrees, then it is easier to turn it with a left turn. 
             action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
         else: 
+            # If the bot's rotation angle module is less than 90 degrees, then it is easier to turn it with a right turn.
             action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
    	 
     return action
