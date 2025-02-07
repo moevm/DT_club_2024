@@ -13,7 +13,7 @@ from gym_duckietown.envs import DuckietownEnv
 DOWN_UP_MOVE= [0.44, 0]
 RIGHT_LEFT_MOVE = [0, 1]
 CONST_STOP_MOVE = [0, 0]
-delta = 3
+DELTA_ANGLE = 3
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--env-name", default="Duckietown-udem1-v0")
@@ -150,12 +150,15 @@ def move_left(current_angle):
     action = [0, 0]
     angle_deg = np.rad2deg(current_angle)
 
-    if (angle_deg < 0 and np.abs(angle_deg + 180) < delta) or (angle_deg > 0 and np.abs(angle_deg - 180) < delta):
+    if (angle_deg < 0 and np.abs(angle_deg + 180) < DELTA_ANGLE) or (angle_deg > 0 and np.abs(angle_deg - 180) < DELTA_ANGLE):
+        #if the angle within the delta_angle is -180 or 180 degrees
         action = np.array(DOWN_UP_MOVE)
     else:
         if angle_deg >= 0: 
+            #if the angle of rotation of the bot is positive, then it is faster and better to turn it to the left
             action = np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
         else: 
+            #if the angle of rotation of the bot os negative, then it is faster and better to turn it ti the right
             action = -np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
 
     return action
@@ -165,12 +168,15 @@ def move_up(current_angle):
     action = [0, 0]
     angle_deg = np.rad2deg(current_angle)
 
-    if np.abs(angle_deg - 90) <= delta:
+    if np.abs(angle_deg - 90) <= DELTA_ANGLE:
         action = np.array(DOWN_UP_MOVE)
+        #if the angle within the delta_angle is 90 degrees
     else:
         if np.abs(angle_deg) > 90:
+            #if the angle of rotation of the bot is positive, then it is faster and better to turn it to the right
             action = -np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
         else: 
+            #if the angle of rotation of the bot is negative, then it is faster and better to turn it to the left
             action = np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
 
     return action
@@ -180,12 +186,15 @@ def move_down(current_angle):
     action = [0, 0]
     angle_deg = np.rad2deg(current_angle)
 
-    if np.abs(angle_deg + 90) <= delta:
+    if np.abs(angle_deg + 90) <= DELTA_ANGLE:
+        #if the angle within the  delta_angle is -90 degrees
         action = np.array(DOWN_UP_MOVE)
     else:
         if np.abs(angle_deg) > 90:
+            #if the angle of rotation of the bot is positive, then it is faster and better to turn it to the left
             action = np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
         else: 
+            #if the angle of rotation of the bot is negative, then it is faster and better to turn it to the right
             action = -np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
 
     return action
@@ -195,12 +204,14 @@ def move_right(current_angle):
     action = [0, 0]
     angle_deg = np.rad2deg(current_angle)
     
-    if np.abs(angle_deg) <= delta:
+    if np.abs(angle_deg) <= DELTA_ANGLE:
         action = np.array(DOWN_UP_MOVE)
     else:
         if angle_deg > 0: 
+            #if the angle of rotation of the bot is positive, then it is faster and better to turn it to the right
             action = -np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
         else: 
+            #if the angle of rotation of the bot is negative, then it is faster and better to turn it to the left
             action = np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
 
     return action
