@@ -11,8 +11,7 @@ from pyglet.window import key
 from gym_duckietown.envs import DuckietownEnv
 
 CONST_UP_DN_MOVE= [0.44, 0]
-CONST_LT_MOVE = [0, 1]
-CONST_RT_MOVE = [0, 1]
+CONST_LT_RT_MOVE = [0, 1]
 CONST_STOP_MOVE = [0, 0]
 
 parser = argparse.ArgumentParser()
@@ -115,14 +114,73 @@ def update(dt):
     if key_handler[key.DOWN] or key_handler[key.S]:
         action -= np.array(CONST_UP_DN_MOVE)
     if key_handler[key.LEFT] or key_handler[key.A]:
-        action += np.array(CONST_LT_MOVE)
+        action += np.array(CONST_LT_RT_MOVE)
     if key_handler[key.RIGHT] or key_handler[key.D]: 
-        action -= np.array(CONST_RT_MOVE)
+        action -= np.array(CONST_LT_RT_MOVE)
     if key_handler[key.SPACE]:
         action = np.array(CONST_STOP_MOVE)
 
+    def move_left(current_angle):
+        action = [0,0]
+        delta = 3
+
+        angle_deg =np.rad2deg(current_angle)
+        if (angle_deg > 0 and np.abs(angle_deg - 180) < delta) or (angle_deg < 0 and np.abs(angle_deg + 180) < delta):
+            action = np.array(CONST_UP_DN_MOVE)
+        else:
+            action = np.array([0, CONST_LT_RT_MOVE[1] / 2])
+
+        return action
+    def move_right(current_angle):
+        action = [0, 0]
+        delta = 3
+
+        angle_deg = np.rad2deg(current_angle)
+        if (np.abs(angle_deg) < delta) or (np.abs(angle_deg - 180) < delta):
+            action = np.array(CONST_UP_DN_MOVE)
+        else:
+            action = np.array([0, -1 * CONST_LT_RT_MOVE[1] / 2])
+
+        return action
+    def move_forward(current_angle):
+        action = [0, 0]
+        delta = 3
+
+        angle_deg = np.rad2deg(current_angle)
+
+        if angle_deg >= 90 - delta and angle_deg <= 90 + delta:
+            action = np.array(CONST_UP_DN_MOVE)  
+        else:
+            action = np.array([0, -1 * CONST_LT_RT_MOVE[1] / 2])  
+
+        return action
+
+    def move_backward(current_angle):
+        action = [0, 0]
+        delta = 3
+
+        angle_deg = np.rad2deg(current_angle)
+
+        if angle_deg >= -90 - delta and angle_deg <= -90 + delta:
+            action = np.array(CONST_UP_DN_MOVE) 
+        else:
+            action = np.array([0, CONST_LT_RT_MOVE[1] / 2])  
+
+        return action
+
+    if key_handler[key.L]:
+        action += move_left(env.cur_angle)
+
+    if key_handler[key.J]:
+        action += move_right(env.cur_angle)
+    if key_handler[key.I]:
+        action += move_forward(env.cur_angle)
+
+    if key_handler[key.K]:
+        action += move_backward(env.cur_angle)
+
     """
-    Here you can set the movement for the duckiebot using action
+    Here you can set the movement for the duckiebot using action    
     """
     action = realistic_move(action)
 
