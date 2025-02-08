@@ -173,10 +173,10 @@ def move_up(current_angle):
         #if the angle within the delta_angle is 90 degrees
     else:
         if np.abs(angle_deg) > 90:
-            #if the angle of rotation of the bot is positive, then it is faster and better to turn it to the right
+            #if the angle of rotation of the bot is greater than 90 degrees, then it is faster and better to turn it to the right
             action = -np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
         else: 
-            #if the angle of rotation of the bot is negative, then it is faster and better to turn it to the left
+            #if the angle of rotation of the bot is less than 90 degrees, then it is faster and better to turn it to the left
             action = np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
 
     return action
@@ -191,10 +191,10 @@ def move_down(current_angle):
         action = np.array(DOWN_UP_MOVE)
     else:
         if np.abs(angle_deg) > 90:
-            #if the angle of rotation of the bot is positive, then it is faster and better to turn it to the left
+            #if the angle of rotation of the bot is greater than 90 degrees, then it is faster and better to turn it to the left
             action = np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
         else: 
-            #if the angle of rotation of the bot is negative, then it is faster and better to turn it to the right
+            #if the angle of rotation of the bot is less than 90 degrees, then it is faster and better to turn it to the right
             action = -np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
 
     return action
@@ -205,6 +205,7 @@ def move_right(current_angle):
     angle_deg = np.rad2deg(current_angle)
     
     if np.abs(angle_deg) <= DELTA_ANGLE:
+        #if the angle within the delta_angle is 0 degrees
         action = np.array(DOWN_UP_MOVE)
     else:
         if angle_deg > 0: 
@@ -215,13 +216,6 @@ def move_right(current_angle):
             action = np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
 
     return action
-
-
-
-    
-
-
-
 
 pyglet.clock.schedule_interval(update, 1.0 / env.unwrapped.frame_rate)
 
