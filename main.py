@@ -46,7 +46,10 @@ env.reset()
 env.render()
 
 button_pressed = False
-turning_left = False  
+turning_left = False
+turning_right = False
+turning_backward = False
+turning_forward = False 
 RENDER_PARAMS = ['human', 'top_down']
 RENDER_MODE = RENDER_PARAMS[1]
 
@@ -56,7 +59,7 @@ def on_key_press(symbol, modifiers):
     This handler processes keyboard commands that
     control the simulation
     """
-    global button_pressed, turning_left
+    global button_pressed, turning_left, turning_right, turning_backward, turning_forward
 
     # RENDER_MODE SWITCH
     
@@ -64,10 +67,22 @@ def on_key_press(symbol, modifiers):
     if symbol == key.TAB:
         RENDER_MODE = RENDER_PARAMS[1] if RENDER_MODE == RENDER_PARAMS[0] else RENDER_PARAMS[0]
 
-    # Toggle turning left on 'L' key press
-    if symbol == key.L:
+    # Toggle turning LEFT on 'J' key press
+    if symbol == key.J:
         button_pressed = not button_pressed  
         turning_left = not turning_left
+    # Toggle turning RIGHT on 'L' key press
+    if symbol == key.L:
+        button_pressed = not button_pressed  
+        turning_right = not turning_right
+    # Toggle turning BACKWARD on 'K' key press
+    if symbol == key.K:
+        button_pressed = not button_pressed  
+        turning_backward = not turning_backward
+    # Toggle turning FORWARD on 'I' key press
+    if symbol == key.I:
+        button_pressed = not button_pressed  
+        turning_forward = not turning_forward
     
     if symbol == key.BACKSPACE or symbol == key.SLASH:
         print("RESET")
@@ -111,7 +126,44 @@ def move_left(current_angle):
     if (angle_deg > 0 and np.abs(angle_deg - 180) < delta) or (angle_deg < 0 and np.abs(angle_deg + 180) < delta):
         action = np.array(CONST_UP_DN_MOVE)
     else:
-        action = np.array([0, CONST_LT_RT_MOVE[1] / 2])  # Turning action
+        action = np.array([0, CONST_LT_RT_MOVE[1] / 2])  
+
+    return action
+
+def move_right(current_angle):
+    action = [0, 0]
+    delta = 3
+
+    angle_deg = np.rad2deg(current_angle)
+    if (np.abs(angle_deg) < delta) or (np.abs(angle_deg - 180) < delta):
+        action = np.array(CONST_UP_DN_MOVE)
+    else:
+        action = np.array([0, -1 * CONST_LT_RT_MOVE[1] / 2])
+
+    return action
+def move_forward(current_angle):
+    action = [0, 0]
+    delta = 3
+
+    angle_deg = np.rad2deg(current_angle)
+
+    if angle_deg >= 90 - delta and angle_deg <= 90 + delta:
+        action = np.array(CONST_UP_DN_MOVE)  
+    else:
+        action = np.array([0, -1 * CONST_LT_RT_MOVE[1] / 2])  
+
+    return action
+
+def move_backward(current_angle):
+    action = [0, 0]
+    delta = 3
+
+    angle_deg = np.rad2deg(current_angle)
+
+    if angle_deg >= -90 - delta and angle_deg <= -90 + delta:
+        action = np.array(CONST_UP_DN_MOVE) 
+    else:
+        action = np.array([0, CONST_LT_RT_MOVE[1] / 2])  
 
     return action
 
@@ -120,7 +172,7 @@ def update(dt):
     This function is called at every frame to handle
     movement/stepping and redrawing
     """
-    global turning_left
+    global turning_left, turning_right, turning_backward, turning_forward
 
     action = np.array([0.0, 0.0])
 
@@ -139,6 +191,12 @@ def update(dt):
 
     if turning_left:
         action = move_left(env.cur_angle)
+    if turning_right:
+        action = move_right(env.cur_angle)
+    if turning_backward:
+        action = move_backward(env.cur_angle)
+    if turning_forward:
+        action = move_forward(env.cur_angle)
     
     """
     Here you can set the movement for the duckiebot using action
