@@ -45,7 +45,6 @@ else:
 env.reset()
 env.render()
 
-button_pressed = False
 turning_left = False
 turning_right = False
 turning_backward = False
@@ -59,7 +58,7 @@ def on_key_press(symbol, modifiers):
     This handler processes keyboard commands that
     control the simulation
     """
-    global button_pressed, turning_left, turning_right, turning_backward, turning_forward
+    global turning_left, turning_right, turning_backward, turning_forward
 
     # RENDER_MODE SWITCH
     
@@ -69,19 +68,15 @@ def on_key_press(symbol, modifiers):
 
     # Toggle turning LEFT on 'J' key press
     if symbol == key.J:
-        button_pressed = not button_pressed  
         turning_left = not turning_left
     # Toggle turning RIGHT on 'L' key press
     if symbol == key.L:
-        button_pressed = not button_pressed  
         turning_right = not turning_right
     # Toggle turning BACKWARD on 'K' key press
     if symbol == key.K:
-        button_pressed = not button_pressed  
         turning_backward = not turning_backward
     # Toggle turning FORWARD on 'I' key press
     if symbol == key.I:
-        button_pressed = not button_pressed  
         turning_forward = not turning_forward
     
     if symbol == key.BACKSPACE or symbol == key.SLASH:
@@ -186,8 +181,6 @@ def update(dt):
         action += np.array(CONST_LT_RT_MOVE)
     if key_handler[key.RIGHT] or key_handler[key.D]: 
         action -= np.array(CONST_LT_RT_MOVE)
-    if key_handler[key.SPACE]:
-        action = np.array(CONST_STOP_MOVE)
 
     if turning_left:
         action = move_left(env.cur_angle)
@@ -197,6 +190,9 @@ def update(dt):
         action = move_backward(env.cur_angle)
     if turning_forward:
         action = move_forward(env.cur_angle)
+        
+    if key_handler[key.SPACE]:
+        action = np.array(CONST_STOP_MOVE)
     
     """
     Here you can set the movement for the duckiebot using action
