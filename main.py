@@ -10,8 +10,8 @@ from pyglet.window import key
 
 from gym_duckietown.envs import DuckietownEnv
 
-DOWN_UP_MOVE= [0.44, 0]
-RIGHT_LEFT_MOVE = [0, 1]
+CONST_UP_DN_MOVE= [0.44, 0]
+CONST_LT_RT_MOVE = [0, 1]
 CONST_STOP_MOVE = [0, 0]
 DELTA_ANGLE = 3
 
@@ -46,6 +46,12 @@ else:
 env.reset()
 env.render()
 
+turning_left = False
+turning_right = False
+turning_backward = False
+turning_forward = False 
+RENDER_PARAMS = ['human', 'top_down']
+RENDER_MODE = RENDER_PARAMS[1]
 
 @env.unwrapped.window.event
 def on_key_press(symbol, modifiers):
@@ -53,16 +59,27 @@ def on_key_press(symbol, modifiers):
     This handler processes keyboard commands that
     control the simulation
     """
+    global turning_left, turning_right, turning_backward, turning_forward
 
     # RENDER_MODE SWITCH
-
-    global RENDER_MODE
     
-    if key_handler[key.TAB]:
-        if RENDER_MODE == RENDER_PARAMS[0]:
-            RENDER_MODE = RENDER_PARAMS[1]
-        else:
-            RENDER_MODE = RENDER_PARAMS[0]
+    global RENDER_MODE
+    if symbol == key.TAB:
+        RENDER_MODE = RENDER_PARAMS[1] if RENDER_MODE == RENDER_PARAMS[0] else RENDER_PARAMS[0]
+
+    # Toggle turning LEFT on 'J' key press
+    if symbol == key.J:
+        turning_left = not turning_left
+    # Toggle turning RIGHT on 'L' key press
+    if symbol == key.L:
+        turning_right = not turning_right
+    # Toggle turning BACKWARD on 'K' key press
+    if symbol == key.K:
+        turning_backward = not turning_backward
+    # Toggle turning FORWARD on 'I' key press
+    if symbol == key.I:
+        turning_forward = not turning_forward
+    
     if symbol == key.BACKSPACE or symbol == key.SLASH:
         print("RESET")
         env.reset()
@@ -73,7 +90,7 @@ def on_key_press(symbol, modifiers):
         env.close()
         sys.exit(0)
 
-
+        
 # Register a keyboard handler
 key_handler = key.KeyStateHandler()
 env.unwrapped.window.push_handlers(key_handler)
@@ -97,38 +114,110 @@ def realistic_move(action):
 
     return action
 
+def move_left(current_angle):
+    action = [0, 0]
+    angle_deg = np.rad2deg(current_angle)
 
-RENDER_PARAMS = ['human', 'top_down']
-RENDER_MODE = RENDER_PARAMS[0]
+    if (angle_deg < 0 and np.abs(angle_deg + 180) < DELTA_ANGLE) or (angle_deg > 0 and np.abs(angle_deg - 180) < DELTA_ANGLE):
+        #if the angle within the delta_angle is -180 or 180 degrees
+        action = np.array(CONST_UP_DN_MOVE)
+    else:
+        if angle_deg >= 0: 
+            #if the angle of rotation of the bot is positive, then it is faster and better to turn it to the left
+            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+        else: 
+            #if the angle of rotation of the bot os negative, then it is faster and better to turn it ti the right
+            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+
+    return action
+
+
+def move_up(current_angle):
+    action = [0, 0]
+    angle_deg = np.rad2deg(current_angle)
+
+    if np.abs(angle_deg - 90) <= DELTA_ANGLE:
+        action = np.array(CONST_UP_DN_MOVE)
+        #if the angle within the delta_angle is 90 degrees
+    else:
+        if np.abs(angle_deg) > 90:
+            #if the angle of rotation of the bot is greater than 90 degrees, then it is faster and better to turn it to the right
+            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+        else: 
+            #if the angle of rotation of the bot is less than 90 degrees, then it is faster and better to turn it to the left
+            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+
+    return action
+
+
+def move_down(current_angle):
+    action = [0, 0]
+    angle_deg = np.rad2deg(current_angle)
+
+    if np.abs(angle_deg + 90) <= DELTA_ANGLE:
+        #if the angle within the  delta_angle is -90 degrees
+        action = np.array(CONST_UP_DN_MOVE)
+    else:
+        if np.abs(angle_deg) > 90:
+            #if the angle of rotation of the bot is greater than 90 degrees, then it is faster and better to turn it to the left
+            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+        else: 
+            #if the angle of rotation of the bot is less than 90 degrees, then it is faster and better to turn it to the right
+            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+
+    return action
+
+
+def move_right(current_angle):
+    action = [0, 0]
+    angle_deg = np.rad2deg(current_angle)
+    
+    if np.abs(angle_deg) <= DELTA_ANGLE:
+        #if the angle within the delta_angle is 0 degrees
+        action = np.array(CONST_UP_DN_MOVE)
+    else:
+        if angle_deg > 0: 
+            #if the angle of rotation of the bot is positive, then it is faster and better to turn it to the right
+            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+        else: 
+            #if the angle of rotation of the bot is negative, then it is faster and better to turn it to the left
+            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+
+    return action
+
+
 def update(dt):
     """
     This function is called at every frame to handle
     movement/stepping and redrawing
     """
+    global turning_left, turning_right, turning_backward, turning_forward
 
     action = np.array([0.0, 0.0])
 
-    # Moovement
+    # Movement handling
 
-    if key_handler[key.W]:
-        action += np.array(DOWN_UP_MOVE)
-    if key_handler[key.S]:
-        action -= np.array(DOWN_UP_MOVE)
-    if  key_handler[key.A]:
-        action += np.array(RIGHT_LEFT_MOVE)
-    if key_handler[key.D]: 
-        action -= np.array(RIGHT_LEFT_MOVE)
+    if key_handler[key.UP] or key_handler[key.W]:
+        action += np.array(CONST_UP_DN_MOVE)
+    if key_handler[key.DOWN] or key_handler[key.S]:
+        action -= np.array(CONST_UP_DN_MOVE)
+    if key_handler[key.LEFT] or key_handler[key.A]:
+        action += np.array(CONST_LT_RT_MOVE)
+    if key_handler[key.RIGHT] or key_handler[key.D]: 
+        action -= np.array(CONST_LT_RT_MOVE)
+
+    if turning_left:
+        action = move_left(env.cur_angle)
+    if turning_right:
+        action = move_right(env.cur_angle)
+    if turning_backward:
+        action = move_down(env.cur_angle)
+    if turning_forward:
+        action = move_up(env.cur_angle)
+        
     if key_handler[key.SPACE]:
         action = np.array(CONST_STOP_MOVE)
-    if key_handler[key.LEFT]: 
-        action = move_left(env.cur_angle)
-    if key_handler[key.RIGHT]:
-        action = move_right(env.cur_angle)
-    if key_handler[key.UP]: 
-        action = move_up(env.cur_angle)
-    if key_handler[key.DOWN]:
-        action = move_down(env.cur_angle)
-
+    
     """
     Here you can set the movement for the duckiebot using action
     """
@@ -144,78 +233,6 @@ def update(dt):
 
     env.render(RENDER_MODE)
 
-
-
-def move_left(current_angle):
-    action = [0, 0]
-    angle_deg = np.rad2deg(current_angle)
-
-    if (angle_deg < 0 and np.abs(angle_deg + 180) < DELTA_ANGLE) or (angle_deg > 0 and np.abs(angle_deg - 180) < DELTA_ANGLE):
-        #if the angle within the delta_angle is -180 or 180 degrees
-        action = np.array(DOWN_UP_MOVE)
-    else:
-        if angle_deg >= 0: 
-            #if the angle of rotation of the bot is positive, then it is faster and better to turn it to the left
-            action = np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
-        else: 
-            #if the angle of rotation of the bot os negative, then it is faster and better to turn it ti the right
-            action = -np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
-
-    return action
-
-
-def move_up(current_angle):
-    action = [0, 0]
-    angle_deg = np.rad2deg(current_angle)
-
-    if np.abs(angle_deg - 90) <= DELTA_ANGLE:
-        action = np.array(DOWN_UP_MOVE)
-        #if the angle within the delta_angle is 90 degrees
-    else:
-        if np.abs(angle_deg) > 90:
-            #if the angle of rotation of the bot is greater than 90 degrees, then it is faster and better to turn it to the right
-            action = -np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
-        else: 
-            #if the angle of rotation of the bot is less than 90 degrees, then it is faster and better to turn it to the left
-            action = np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
-
-    return action
-
-
-def move_down(current_angle):
-    action = [0, 0]
-    angle_deg = np.rad2deg(current_angle)
-
-    if np.abs(angle_deg + 90) <= DELTA_ANGLE:
-        #if the angle within the  delta_angle is -90 degrees
-        action = np.array(DOWN_UP_MOVE)
-    else:
-        if np.abs(angle_deg) > 90:
-            #if the angle of rotation of the bot is greater than 90 degrees, then it is faster and better to turn it to the left
-            action = np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
-        else: 
-            #if the angle of rotation of the bot is less than 90 degrees, then it is faster and better to turn it to the right
-            action = -np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
-
-    return action
-
-
-def move_right(current_angle):
-    action = [0, 0]
-    angle_deg = np.rad2deg(current_angle)
-    
-    if np.abs(angle_deg) <= DELTA_ANGLE:
-        #if the angle within the delta_angle is 0 degrees
-        action = np.array(DOWN_UP_MOVE)
-    else:
-        if angle_deg > 0: 
-            #if the angle of rotation of the bot is positive, then it is faster and better to turn it to the right
-            action = -np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
-        else: 
-            #if the angle of rotation of the bot is negative, then it is faster and better to turn it to the left
-            action = np.array([0, RIGHT_LEFT_MOVE[1] / 2]) 
-
-    return action
 
 pyglet.clock.schedule_interval(update, 1.0 / env.unwrapped.frame_rate)
 
