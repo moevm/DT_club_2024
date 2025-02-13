@@ -141,6 +141,7 @@ def get_bot_image(obs):
     cv2.imshow("camera image", camera_image)
     cv2.imshow("mask yellow", mask_yellow)
     cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 def get_gray_mask_image(obs): 
     camera_image = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR) # convert from RGB to BGR
