@@ -10,10 +10,7 @@ from pyglet.window import key
 
 from gym_duckietown.envs import DuckietownEnv
 
-CONST_UP_DN_MOVE= [0.44, 0]
-CONST_LT_RT_MOVE = [0, 1]
-CONST_STOP_MOVE = [0, 0]
-DELTA_ANGLE = 3
+from src.const import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--env-name", default="Duckietown-udem1-v0")
