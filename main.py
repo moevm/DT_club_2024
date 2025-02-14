@@ -13,6 +13,7 @@ from gym_duckietown.envs import DuckietownEnv
 CONST_UP_DN_MOVE= [0.44, 0]
 CONST_LT_RT_MOVE = [0, 1]
 CONST_STOP_MOVE = [0, 0]
+DELTA_ANGLE = 3
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--env-name", default="Duckietown-udem1-v0")
@@ -45,13 +46,61 @@ else:
 env.reset()
 env.render()
 
-button_pressed = False
-turning_left = False
-turning_right = False
-turning_backward = False
-turning_forward = False 
+def set_false(dict, key_to_keep):
+    for key in dict:
+        if key != key_to_keep:
+            dict[key] = False
+    return dict
+
+turning_states = {
+    'turning_left': False,
+    'turning_right': False,
+    'turning_backward': False,
+    'turning_forward': False
+}
+
+def get_bot_image(obs):
+    camera_image = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
+
+
+    cv2.imshow("mask yellow", get_mask(obs, 'yellow')) # show_mask 'yellow' / 'gray'
+    cv2.imshow("mask gray", get_mask(obs, 'gray'))
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+def get_mask(obs, mask_color):
+    if mask_color == 'gray':
+        image_bgr = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR) # convert from RGB to BGR
+        lower_gray = np.array([156, 161, 156])
+        upper_gray = np.array([185, 182, 185])
+
+        mask_gray = cv2.inRange(image_bgr, lower_gray, upper_gray)
+        mask = cv2.cvtColor(mask_gray, cv2.COLOR_GRAY2BGR) 
+    elif mask_color == 'yellow':
+        image_hsv = cv2.cvtColor(obs, cv2.COLOR_RGB2HSV) # convert from RGB to HSV
+        lower_yellow = np.array([20, 100, 100])
+        upper_yellow = np.array([29, 254, 254])
+
+        mask_yellow = cv2.inRange(image_hsv, lower_yellow, upper_yellow)
+        mask = cv2.cvtColor(mask_yellow, cv2.COLOR_GRAY2BGR)
+    return mask
+
 RENDER_PARAMS = ['human', 'top_down']
 RENDER_MODE = RENDER_PARAMS[1]
+TAKE_IMAGE = False
+
+writer_mask = cv2.VideoWriter(
+    "output_mask.mp4",
+    cv2.VideoWriter_fourcc(*"mp4v"),
+    20,
+    (640, 480), # width, height
+)
+writer_camera = cv2.VideoWriter(
+    "output.mp4",
+    cv2.VideoWriter_fourcc(*"mp4v"),
+    20,
+    (640, 480), # width, height
+) 
 
 @env.unwrapped.window.event
 def on_key_press(symbol, modifiers):
@@ -59,7 +108,6 @@ def on_key_press(symbol, modifiers):
     This handler processes keyboard commands that
     control the simulation
     """
-    global button_pressed, turning_left, turning_right, turning_backward, turning_forward
 
     # RENDER_MODE SWITCH
     
@@ -67,22 +115,20 @@ def on_key_press(symbol, modifiers):
     if symbol == key.TAB:
         RENDER_MODE = RENDER_PARAMS[1] if RENDER_MODE == RENDER_PARAMS[0] else RENDER_PARAMS[0]
 
-    # Toggle turning LEFT on 'J' key press
+    # Toggle turning states using the keyboard
     if symbol == key.J:
-        button_pressed = not button_pressed  
-        turning_left = not turning_left
-    # Toggle turning RIGHT on 'L' key press
+        turning_states['turning_left'] = not turning_states['turning_left']
+        set_false(turning_states, 'turning_left')
     if symbol == key.L:
-        button_pressed = not button_pressed  
-        turning_right = not turning_right
-    # Toggle turning BACKWARD on 'K' key press
+        turning_states['turning_right'] = not turning_states['turning_right']
+        set_false(turning_states, 'turning_right')
     if symbol == key.K:
-        button_pressed = not button_pressed  
-        turning_backward = not turning_backward
-    # Toggle turning FORWARD on 'I' key press
+        turning_states['turning_backward'] = not turning_states['turning_backward']
+        set_false(turning_states, 'turning_backward')
     if symbol == key.I:
-        button_pressed = not button_pressed  
-        turning_forward = not turning_forward
+        turning_states['turning_forward'] = not turning_states['turning_forward']
+        set_false(turning_states, 'turning_forward')
+    
     
     if symbol == key.BACKSPACE or symbol == key.SLASH:
         print("RESET")
@@ -91,6 +137,8 @@ def on_key_press(symbol, modifiers):
     elif symbol == key.PAGEUP:
         env.unwrapped.cam_angle[0] = 0
     elif symbol == key.ESCAPE:
+        writer_mask.release()
+        writer_camera.release()
         env.close()
         sys.exit(0)
 
@@ -120,60 +168,82 @@ def realistic_move(action):
 
 def move_left(current_angle):
     action = [0, 0]
-    delta = 3
     angle_deg = np.rad2deg(current_angle)
-    
-    if (angle_deg > 0 and np.abs(angle_deg - 180) < delta) or (angle_deg < 0 and np.abs(angle_deg + 180) < delta):
+
+    if (angle_deg < 0 and np.abs(angle_deg + 180) < DELTA_ANGLE) or (angle_deg > 0 and np.abs(angle_deg - 180) < DELTA_ANGLE):
+        #if the angle within the delta_angle is -180 or 180 degrees
         action = np.array(CONST_UP_DN_MOVE)
     else:
-        action = np.array([0, CONST_LT_RT_MOVE[1] / 2])  
+        if angle_deg >= 0: 
+            #if the angle of rotation of the bot is positive, then it is faster and better to turn it to the left
+            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+        else: 
+            #if the angle of rotation of the bot os negative, then it is faster and better to turn it ti the right
+            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
 
     return action
+
+
+def move_up(current_angle):
+    action = [0, 0]
+    angle_deg = np.rad2deg(current_angle)
+
+    if np.abs(angle_deg - 90) <= DELTA_ANGLE:
+        action = np.array(CONST_UP_DN_MOVE)
+        #if the angle within the delta_angle is 90 degrees
+    else:
+        if np.abs(angle_deg) > 90:
+            #if the angle of rotation of the bot is greater than 90 degrees, then it is faster and better to turn it to the right
+            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+        else: 
+            #if the angle of rotation of the bot is less than 90 degrees, then it is faster and better to turn it to the left
+            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+
+    return action
+
+
+def move_down(current_angle):
+    action = [0, 0]
+    angle_deg = np.rad2deg(current_angle)
+
+    if np.abs(angle_deg + 90) <= DELTA_ANGLE:
+        #if the angle within the  delta_angle is -90 degrees
+        action = np.array(CONST_UP_DN_MOVE)
+    else:
+        if np.abs(angle_deg) > 90:
+            #if the angle of rotation of the bot is greater than 90 degrees, then it is faster and better to turn it to the left
+            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+        else: 
+            #if the angle of rotation of the bot is less than 90 degrees, then it is faster and better to turn it to the right
+            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+
+    return action
+
 
 def move_right(current_angle):
     action = [0, 0]
-    delta = 3
-
     angle_deg = np.rad2deg(current_angle)
-    if (np.abs(angle_deg) < delta) or (np.abs(angle_deg - 180) < delta):
+    
+    if np.abs(angle_deg) <= DELTA_ANGLE:
+        #if the angle within the delta_angle is 0 degrees
         action = np.array(CONST_UP_DN_MOVE)
     else:
-        action = np.array([0, -1 * CONST_LT_RT_MOVE[1] / 2])
-
-    return action
-def move_forward(current_angle):
-    action = [0, 0]
-    delta = 3
-
-    angle_deg = np.rad2deg(current_angle)
-
-    if angle_deg >= 90 - delta and angle_deg <= 90 + delta:
-        action = np.array(CONST_UP_DN_MOVE)  
-    else:
-        action = np.array([0, -1 * CONST_LT_RT_MOVE[1] / 2])  
+        if angle_deg > 0: 
+            #if the angle of rotation of the bot is positive, then it is faster and better to turn it to the right
+            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
+        else: 
+            #if the angle of rotation of the bot is negative, then it is faster and better to turn it to the left
+            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
 
     return action
 
-def move_backward(current_angle):
-    action = [0, 0]
-    delta = 3
-
-    angle_deg = np.rad2deg(current_angle)
-
-    if angle_deg >= -90 - delta and angle_deg <= -90 + delta:
-        action = np.array(CONST_UP_DN_MOVE) 
-    else:
-        action = np.array([0, CONST_LT_RT_MOVE[1] / 2])  
-
-    return action
 
 def update(dt):
     """
     This function is called at every frame to handle
     movement/stepping and redrawing
     """
-    global turning_left, turning_right, turning_backward, turning_forward
-
+    global TAKE_IMAGE
     action = np.array([0.0, 0.0])
 
     # Movement handling
@@ -186,17 +256,19 @@ def update(dt):
         action += np.array(CONST_LT_RT_MOVE)
     if key_handler[key.RIGHT] or key_handler[key.D]: 
         action -= np.array(CONST_LT_RT_MOVE)
+
+    if turning_states['turning_left']:
+        action = move_left(env.cur_angle)
+    if turning_states['turning_right']:
+        action = move_right(env.cur_angle)
+    if turning_states['turning_backward']:
+        action = move_down(env.cur_angle)
+    if turning_states['turning_forward']:
+        action = move_up(env.cur_angle)
+        
     if key_handler[key.SPACE]:
         action = np.array(CONST_STOP_MOVE)
-
-    if turning_left:
-        action = move_left(env.cur_angle)
-    if turning_right:
-        action = move_right(env.cur_angle)
-    if turning_backward:
-        action = move_backward(env.cur_angle)
-    if turning_forward:
-        action = move_forward(env.cur_angle)
+        set_false(turning_states, 'all')
     
     """
     Here you can set the movement for the duckiebot using action
@@ -211,6 +283,19 @@ def update(dt):
     print("step_count = %s, reward=%.3f" % (env.unwrapped.step_count, reward))
     print("bot position = ", env.cur_pos)
 
+    # image
+    if key_handler[key.F]:
+        if not TAKE_IMAGE:
+            get_bot_image(obs)
+            TAKE_IMAGE = True
+    else:
+        TAKE_IMAGE = False
+    image_bgr = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
+    writer_camera.write(image_bgr)
+
+    mask_gray = get_mask(obs, 'gray')  # запись маски 'gray' / 'yellow'
+    writer_mask.write(mask_gray)
+    
     env.render(RENDER_MODE)
 
 
