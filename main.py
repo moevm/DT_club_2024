@@ -109,6 +109,7 @@ def on_key_press(symbol, modifiers):
     control the simulation
     """
 
+
     # RENDER_MODE SWITCH
     
     global RENDER_MODE
@@ -128,7 +129,6 @@ def on_key_press(symbol, modifiers):
     if symbol == key.I:
         turning_states['turning_forward'] = not turning_states['turning_forward']
         set_false(turning_states, 'turning_forward')
-    
     
     if symbol == key.BACKSPACE or symbol == key.SLASH:
         print("RESET")
