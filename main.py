@@ -46,11 +46,11 @@ else:
 env.reset()
 env.render()
 
-def set_false(dict, key_to_keep):
-    for key in dict:
+def set_false(state_dict, key_to_keep):
+    for key in state_dict:
         if key != key_to_keep:
-            dict[key] = False
-    return dict
+            state_dict[key] = False
+    return state_dict
 
 turning_states = {
     'turning_left': False,
