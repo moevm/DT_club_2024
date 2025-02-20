@@ -10,10 +10,7 @@ from pyglet.window import key
 
 from gym_duckietown.envs import DuckietownEnv
 
-CONST_UP_DN_MOVE= [0.44, 0]
-CONST_LT_RT_MOVE = [0, 1]
-CONST_STOP_MOVE = [0, 0]
-DELTA_ANGLE = 3
+from src.const import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--env-name", default="Duckietown-udem1-v0")
@@ -102,6 +99,19 @@ writer_camera = cv2.VideoWriter(
     (640, 480), # width, height
 ) 
 
+writer_camera = cv2.VideoWriter(
+    "output.mp4",
+    cv2.VideoWriter_fourcc(*"mp4v"),
+    20,
+    (640, 480), # width, height
+) 
+writer_mask = cv2.VideoWriter(
+    "output_mask.mp4",
+    cv2.VideoWriter_fourcc(*"mp4v"),
+    20,
+    (640, 480), # width, height
+)
+
 @env.unwrapped.window.event
 def on_key_press(symbol, modifiers):
     """
@@ -137,8 +147,8 @@ def on_key_press(symbol, modifiers):
     elif symbol == key.PAGEUP:
         env.unwrapped.cam_angle[0] = 0
     elif symbol == key.ESCAPE:
-        writer_mask.release()
         writer_camera.release()
+        writer_mask.release() 
         env.close()
         sys.exit(0)
 
@@ -165,6 +175,29 @@ def realistic_move(action):
     action[1] = v2
 
     return action
+
+def get_bot_image(obs):
+    camera_image = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR) # convert from RGB to BGR
+
+    lower_yellow = np.array([20, 100, 100])
+    upper_yellow = np.array([30, 255, 255])
+    hsv_image = cv2.cvtColor(obs, cv2.COLOR_RGB2HSV) # convert from RGB to HSV
+    mask_yellow = cv2.inRange(hsv_image, lower_yellow, upper_yellow)
+    
+    cv2.imshow("camera image", camera_image)
+    cv2.imshow("mask yellow", mask_yellow)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+def get_gray_mask_image(obs): 
+    camera_image = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR) # convert from RGB to BGR
+    
+    lower_gray = np.array([155, 160, 155])
+    upper_gray = np.array([185, 180, 185])
+    mask_gray = cv2.inRange(camera_image, lower_gray, upper_gray)
+    mask = cv2.cvtColor(mask_gray, cv2.COLOR_GRAY2BGR) 
+
+    return mask
 
 def move_left(current_angle):
     action = [0, 0]
@@ -243,6 +276,7 @@ def update(dt):
     This function is called at every frame to handle
     movement/stepping and redrawing
     """
+    
     global TAKE_IMAGE
     action = np.array([0.0, 0.0])
 
@@ -279,7 +313,7 @@ def update(dt):
     if key_handler[key.LSHIFT]:
         action *= 1.5
 
-    obs, reward, done, info = env.step(action)
+    obs, reward, done, info = env.step(action) # RGB
     print("step_count = %s, reward=%.3f" % (env.unwrapped.step_count, reward))
     print("bot position = ", env.cur_pos)
 
