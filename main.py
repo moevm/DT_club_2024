@@ -99,19 +99,6 @@ writer_camera = cv2.VideoWriter(
     (640, 480), # width, height
 ) 
 
-writer_camera = cv2.VideoWriter(
-    "output.mp4",
-    cv2.VideoWriter_fourcc(*"mp4v"),
-    20,
-    (640, 480), # width, height
-) 
-writer_mask = cv2.VideoWriter(
-    "output_mask.mp4",
-    cv2.VideoWriter_fourcc(*"mp4v"),
-    20,
-    (640, 480), # width, height
-)
-
 @env.unwrapped.window.event
 def on_key_press(symbol, modifiers):
     """
@@ -119,10 +106,8 @@ def on_key_press(symbol, modifiers):
     control the simulation
     """
 
-
-    # RENDER_MODE SWITCH
-    
     global RENDER_MODE
+    
     if symbol == key.TAB:
         RENDER_MODE = RENDER_PARAMS[1] if RENDER_MODE == RENDER_PARAMS[0] else RENDER_PARAMS[0]
 
@@ -281,7 +266,6 @@ def update(dt):
     action = np.array([0.0, 0.0])
 
     # Movement handling
-
     if key_handler[key.UP] or key_handler[key.W]:
         action += np.array(CONST_UP_DN_MOVE)
     if key_handler[key.DOWN] or key_handler[key.S]:
