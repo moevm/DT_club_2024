@@ -1,16 +1,13 @@
 from PIL import Image
-import cv2
 import argparse
 import sys
-
 import gym
-import numpy as np
 import pyglet
 from pyglet.window import key
-
 from gym_duckietown.envs import DuckietownEnv
-
 from src.const import *
+from src.move import *
+from src.image import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--env-name", default="Duckietown-udem1-v0")
@@ -48,56 +45,6 @@ def set_false(state_dict, key_to_keep):
         if key != key_to_keep:
             state_dict[key] = False
     return state_dict
-
-turning_states = {
-    'turning_left': False,
-    'turning_right': False,
-    'turning_backward': False,
-    'turning_forward': False
-}
-
-def get_bot_image(obs):
-    camera_image = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
-
-
-    cv2.imshow("mask yellow", get_mask(obs, 'yellow')) # show_mask 'yellow' / 'gray'
-    cv2.imshow("mask gray", get_mask(obs, 'gray'))
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-def get_mask(obs, mask_color):
-    if mask_color == 'gray':
-        image_bgr = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR) # convert from RGB to BGR
-        lower_gray = np.array([156, 161, 156])
-        upper_gray = np.array([185, 182, 185])
-
-        mask_gray = cv2.inRange(image_bgr, lower_gray, upper_gray)
-        mask = cv2.cvtColor(mask_gray, cv2.COLOR_GRAY2BGR) 
-    elif mask_color == 'yellow':
-        image_hsv = cv2.cvtColor(obs, cv2.COLOR_RGB2HSV) # convert from RGB to HSV
-        lower_yellow = np.array([20, 100, 100])
-        upper_yellow = np.array([29, 254, 254])
-
-        mask_yellow = cv2.inRange(image_hsv, lower_yellow, upper_yellow)
-        mask = cv2.cvtColor(mask_yellow, cv2.COLOR_GRAY2BGR)
-    return mask
-
-RENDER_PARAMS = ['human', 'top_down']
-RENDER_MODE = RENDER_PARAMS[1]
-TAKE_IMAGE = False
-
-writer_mask = cv2.VideoWriter(
-    "output_mask.mp4",
-    cv2.VideoWriter_fourcc(*"mp4v"),
-    20,
-    (640, 480), # width, height
-)
-writer_camera = cv2.VideoWriter(
-    "output.mp4",
-    cv2.VideoWriter_fourcc(*"mp4v"),
-    20,
-    (640, 480), # width, height
-) 
 
 @env.unwrapped.window.event
 def on_key_press(symbol, modifiers):
@@ -137,124 +84,9 @@ def on_key_press(symbol, modifiers):
         env.close()
         sys.exit(0)
 
-        
 # Register a keyboard handler
 key_handler = key.KeyStateHandler()
 env.unwrapped.window.push_handlers(key_handler)
-
-
-def realistic_move(action):
-    wheel_distance = 0.102
-    min_rad = 0.08
-
-    v1 = action[0]
-    v2 = action[1]
-    # Limit radius of curvature
-    if v1 == 0 or abs(v2 / v1) > (min_rad + wheel_distance / 2.0) / (min_rad - wheel_distance / 2.0):
-        # adjust velocities evenly such that condition is fulfilled
-        delta_v = (v2 - v1) / 2 - wheel_distance / (4 * min_rad) * (v1 + v2)
-        v1 += delta_v
-        v2 -= delta_v
-
-    action[0] = v1
-    action[1] = v2
-
-    return action
-
-def get_bot_image(obs):
-    camera_image = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR) # convert from RGB to BGR
-
-    lower_yellow = np.array([20, 100, 100])
-    upper_yellow = np.array([30, 255, 255])
-    hsv_image = cv2.cvtColor(obs, cv2.COLOR_RGB2HSV) # convert from RGB to HSV
-    mask_yellow = cv2.inRange(hsv_image, lower_yellow, upper_yellow)
-    
-    cv2.imshow("camera image", camera_image)
-    cv2.imshow("mask yellow", mask_yellow)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-def get_gray_mask_image(obs): 
-    camera_image = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR) # convert from RGB to BGR
-    
-    lower_gray = np.array([155, 160, 155])
-    upper_gray = np.array([185, 180, 185])
-    mask_gray = cv2.inRange(camera_image, lower_gray, upper_gray)
-    mask = cv2.cvtColor(mask_gray, cv2.COLOR_GRAY2BGR) 
-
-    return mask
-
-def move_left(current_angle):
-    action = [0, 0]
-    angle_deg = np.rad2deg(current_angle)
-
-    if (angle_deg < 0 and np.abs(angle_deg + 180) < DELTA_ANGLE) or (angle_deg > 0 and np.abs(angle_deg - 180) < DELTA_ANGLE):
-        #if the angle within the delta_angle is -180 or 180 degrees
-        action = np.array(CONST_UP_DN_MOVE)
-    else:
-        if angle_deg >= 0: 
-            #if the angle of rotation of the bot is positive, then it is faster and better to turn it to the left
-            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
-        else: 
-            #if the angle of rotation of the bot os negative, then it is faster and better to turn it ti the right
-            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
-
-    return action
-
-
-def move_up(current_angle):
-    action = [0, 0]
-    angle_deg = np.rad2deg(current_angle)
-
-    if np.abs(angle_deg - 90) <= DELTA_ANGLE:
-        action = np.array(CONST_UP_DN_MOVE)
-        #if the angle within the delta_angle is 90 degrees
-    else:
-        if np.abs(angle_deg) > 90:
-            #if the angle of rotation of the bot is greater than 90 degrees, then it is faster and better to turn it to the right
-            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
-        else: 
-            #if the angle of rotation of the bot is less than 90 degrees, then it is faster and better to turn it to the left
-            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
-
-    return action
-
-
-def move_down(current_angle):
-    action = [0, 0]
-    angle_deg = np.rad2deg(current_angle)
-
-    if np.abs(angle_deg + 90) <= DELTA_ANGLE:
-        #if the angle within the  delta_angle is -90 degrees
-        action = np.array(CONST_UP_DN_MOVE)
-    else:
-        if np.abs(angle_deg) > 90:
-            #if the angle of rotation of the bot is greater than 90 degrees, then it is faster and better to turn it to the left
-            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
-        else: 
-            #if the angle of rotation of the bot is less than 90 degrees, then it is faster and better to turn it to the right
-            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
-
-    return action
-
-
-def move_right(current_angle):
-    action = [0, 0]
-    angle_deg = np.rad2deg(current_angle)
-    
-    if np.abs(angle_deg) <= DELTA_ANGLE:
-        #if the angle within the delta_angle is 0 degrees
-        action = np.array(CONST_UP_DN_MOVE)
-    else:
-        if angle_deg > 0: 
-            #if the angle of rotation of the bot is positive, then it is faster and better to turn it to the right
-            action = -np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
-        else: 
-            #if the angle of rotation of the bot is negative, then it is faster and better to turn it to the left
-            action = np.array([0, CONST_LT_RT_MOVE[1] / 2]) 
-
-    return action
-
 
 def update(dt):
     """
@@ -308,6 +140,7 @@ def update(dt):
             TAKE_IMAGE = True
     else:
         TAKE_IMAGE = False
+    
     image_bgr = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
     writer_camera.write(image_bgr)
 
@@ -315,7 +148,6 @@ def update(dt):
     writer_mask.write(mask_gray)
     
     env.render(RENDER_MODE)
-
 
 pyglet.clock.schedule_interval(update, 1.0 / env.unwrapped.frame_rate)
 
