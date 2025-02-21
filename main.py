@@ -71,17 +71,22 @@ def get_bot_image(obs):
 
     image_bgr = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR) # convert from RGB to BGR
     mask_gray = get_mask(obs, 'gray')
+    mask_gray[0:290, :] = 0 # для строк с индексами 0 до 339 каждый "столбец" (каждый x) покрасится в белый (255), в черный (0)
+    print(mask_gray)
 
     contours, _ = cv2.findContours(image=mask_gray, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
     image_copy = camera_image.copy()
     image_with_contours = image_copy.copy()
 
-    for contour in contours:
-        if cv2.contourArea(contour) >= 2:
-            image_with_contours = cv2.drawContours(image_copy, contour, -1, color=[0, 255, 0], thickness=3)
+    if contours:
+        largest_contour = max(contours, key=cv2.contourArea)
+        image_with_contours = cv2.drawContours(image_copy, largest_contour, -1, color=[0, 255, 0], thickness=3)
+        # for contour in contours:
+        #     if cv2.contourArea(contour) >= 2:
+        #         image_with_contours = cv2.drawContours(image_copy, contour, -1, color=[0, 255, 0], thickness=3)
 
     cv2.imshow("mask yellow", get_mask(obs, 'yellow')) # show_mask 'yellow' / 'gray'
-    cv2.imshow("mask gray", get_mask(obs, 'gray'))
+    cv2.imshow("mask gray", mask_gray)
     cv2.imshow("contours", image_with_contours)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
@@ -181,18 +186,18 @@ def realistic_move(action):
 
     return action
 
-def get_bot_image(obs):
-    camera_image = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR) # convert from RGB to BGR
+# def get_bot_image(obs):
+#     camera_image = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR) # convert from RGB to BGR
 
-    lower_yellow = np.array([20, 100, 100])
-    upper_yellow = np.array([30, 255, 255])
-    hsv_image = cv2.cvtColor(obs, cv2.COLOR_RGB2HSV) # convert from RGB to HSV
-    mask_yellow = cv2.inRange(hsv_image, lower_yellow, upper_yellow)
+#     lower_yellow = np.array([20, 100, 100])
+#     upper_yellow = np.array([30, 255, 255])
+#     hsv_image = cv2.cvtColor(obs, cv2.COLOR_RGB2HSV) # convert from RGB to HSV
+#     mask_yellow = cv2.inRange(hsv_image, lower_yellow, upper_yellow)
     
-    cv2.imshow("camera image", camera_image)
-    cv2.imshow("mask yellow", mask_yellow)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+#     cv2.imshow("camera image", camera_image)
+#     cv2.imshow("mask yellow", mask_yellow)
+#     cv2.waitKey(0)
+#     cv2.destroyAllWindows()
 
 def get_gray_mask_image(obs): 
     camera_image = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR) # convert from RGB to BGR
@@ -323,17 +328,23 @@ def update(dt):
 
 
     if contours:
-            # Находим самый большой контур
+        # Находим самый большой контур
         largest_contour = max(contours, key=cv2.contourArea)
 
-            # Определяем центр бота 
-        bot_center = (obs.shape[1] // 2, obs.shape[0] // 2)
+        # max contour area = 480 * 640 = 307200
+        contour_area = cv2.contourArea(largest_contour)
+        print("Contour area % =", contour_area / (480 * 640))
 
-            # Используем pointPolygonTest для определения расстояния до контура
+        # Определяем центр бота 
+        bot_center = (obs.shape[1] // 2, obs.shape[0] // 2) # (x, y)
+
+        print("bot center=", bot_center)
+        # Используем pointPolygonTest для определения расстояния до контура
         distance = cv2.pointPolygonTest(largest_contour, bot_center, True)
+        distance = abs(distance)
+        print("dist =", distance)
 
-
-            # Пороговое значение для остановки
+        # Пороговое значение для остановки
         if distance < 20:  # меньше 20 пикселей
             action = np.array(CONST_STOP_MOVE)
             set_false(turning_states, 'all')
