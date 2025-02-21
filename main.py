@@ -14,6 +14,7 @@ CONST_UP_DN_MOVE= [0.44, 0]
 CONST_LT_RT_MOVE = [0, 1]
 CONST_STOP_MOVE = [0, 0]
 DELTA_ANGLE = 3
+contours = False
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--env-name", default="Duckietown-udem1-v0")
@@ -60,22 +61,34 @@ turning_states = {
 }
 
 def get_bot_image(obs):
+    global contours
     camera_image = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
 
 
+    image_bgr = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR) # convert from RGB to BGR
+    mask_gray = get_mask(obs, 'gray')
+
+    contours, _ = cv2.findContours(image=mask_gray, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
+    image_copy = camera_image.copy()
+    image_with_contours = image_copy.copy()
+
+    for contour in contours:
+        if cv2.contourArea(contour) >= 2:
+            image_with_contours = cv2.drawContours(image_copy, contour, -1, color=[0, 255, 0], thickness=3)
+
     cv2.imshow("mask yellow", get_mask(obs, 'yellow')) # show_mask 'yellow' / 'gray'
     cv2.imshow("mask gray", get_mask(obs, 'gray'))
+    cv2.imshow("contours", image_with_contours)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 def get_mask(obs, mask_color):
     if mask_color == 'gray':
         image_bgr = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR) # convert from RGB to BGR
-        lower_gray = np.array([156, 161, 156])
-        upper_gray = np.array([185, 182, 185])
+        lower_gray = np.array([155, 160, 155])
+        upper_gray = np.array([185, 182, 185]) 
 
-        mask_gray = cv2.inRange(image_bgr, lower_gray, upper_gray)
-        mask = cv2.cvtColor(mask_gray, cv2.COLOR_GRAY2BGR) 
+        mask = cv2.inRange(image_bgr, lower_gray, upper_gray)
     elif mask_color == 'yellow':
         image_hsv = cv2.cvtColor(obs, cv2.COLOR_RGB2HSV) # convert from RGB to HSV
         lower_yellow = np.array([20, 100, 100])
@@ -243,7 +256,7 @@ def update(dt):
     This function is called at every frame to handle
     movement/stepping and redrawing
     """
-    global TAKE_IMAGE
+    global TAKE_IMAGE,contours
     action = np.array([0.0, 0.0])
 
     # Movement handling
@@ -282,6 +295,23 @@ def update(dt):
     obs, reward, done, info = env.step(action)
     print("step_count = %s, reward=%.3f" % (env.unwrapped.step_count, reward))
     print("bot position = ", env.cur_pos)
+
+
+    if contours:
+            # Находим самый большой контур
+        largest_contour = max(contours, key=cv2.contourArea)
+
+            # Определяем центр бота 
+        bot_center = (obs.shape[1] // 2, obs.shape[0] // 2)
+
+            # Используем pointPolygonTest для определения расстояния до контура
+        distance = cv2.pointPolygonTest(largest_contour, bot_center, True)
+
+
+            # Установите пороговое значение для остановки
+        if distance < 20:  # меньше 20 пикселей
+            action = np.array(CONST_STOP_MOVE)
+            set_false(turning_states, 'all')
 
     # image
     if key_handler[key.F]:
