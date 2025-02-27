@@ -59,6 +59,9 @@ turning_states = {
     'turning_backward': False,
     'turning_forward': False
 }
+flags = {
+    'new_gray_mask': False
+}
 
 def get_bot_image(obs):
     global contours
@@ -67,18 +70,12 @@ def get_bot_image(obs):
 
     image_bgr = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR) # convert from RGB to BGR
     mask_gray = get_mask(obs, 'gray')
-
-    contours, _ = cv2.findContours(image=mask_gray, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
-    image_copy = camera_image.copy()
-    image_with_contours = image_copy.copy()
-
-    for contour in contours:
-        if cv2.contourArea(contour) >= 2:
-            image_with_contours = cv2.drawContours(image_copy, contour, -1, color=[0, 255, 0], thickness=3)
+    mask_gray[0:310] = 0
+    mask_gray[:,0:83] = 0
+    mask_gray[:, -83:] = 0
 
     cv2.imshow("mask yellow", get_mask(obs, 'yellow')) # show_mask 'yellow' / 'gray'
-    cv2.imshow("mask gray", get_mask(obs, 'gray'))
-    cv2.imshow("contours", image_with_contours)
+    cv2.imshow("mask gray", mask_gray)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
@@ -86,7 +83,7 @@ def get_mask(obs, mask_color):
     if mask_color == 'gray':
         image_bgr = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR) # convert from RGB to BGR
         lower_gray = np.array([155, 160, 155])
-        upper_gray = np.array([185, 182, 185]) 
+        upper_gray = np.array([230, 240, 230]) 
 
         mask = cv2.inRange(image_bgr, lower_gray, upper_gray)
     elif mask_color == 'yellow':
@@ -101,6 +98,7 @@ def get_mask(obs, mask_color):
 RENDER_PARAMS = ['human', 'top_down']
 RENDER_MODE = RENDER_PARAMS[1]
 TAKE_IMAGE = False
+MAX_CONTOUR_AREA = 307200
 
 writer_mask = cv2.VideoWriter(
     "output_mask.mp4",
@@ -286,6 +284,18 @@ def update(dt):
     """
     Here you can set the movement for the duckiebot using action
     """
+    if contours:
+        gray_contourArea = max(contours, key=cv2.contourArea)
+        contour_area = cv2.contourArea(gray_contourArea)
+
+            # Установите пороговое значение для остановки
+        if contour_area > MAX_CONTOUR_AREA * 0.032 and flags["new_gray_mask"]:  
+            action -= np.array(CONST_UP_DN_MOVE)
+            set_false(turning_states, 'all')
+            flags["new_gray_mask"] = False
+
+
+            
     action = realistic_move(action)
 
     # Speed boost
@@ -296,22 +306,13 @@ def update(dt):
     print("step_count = %s, reward=%.3f" % (env.unwrapped.step_count, reward))
     print("bot position = ", env.cur_pos)
 
-
-    if contours:
-            # Находим самый большой контур
-        largest_contour = max(contours, key=cv2.contourArea)
-
-            # Определяем центр бота 
-        bot_center = (obs.shape[1] // 2, obs.shape[0] // 2)
-
-            # Используем pointPolygonTest для определения расстояния до контура
-        distance = cv2.pointPolygonTest(largest_contour, bot_center, True)
-
-
-            # Установите пороговое значение для остановки
-        if distance < 20:  # меньше 20 пикселей
-            action = np.array(CONST_STOP_MOVE)
-            set_false(turning_states, 'all')
+    # Получение контуров серой разметки каждый кадр
+    mask_gray = get_mask(obs, 'gray')
+    flags["new_gray_mask"] = True
+    mask_gray[0:300] = 0
+    mask_gray[:,0:83] = 0
+    mask_gray[:, -83:] = 0
+    contours, _ = cv2.findContours(image=mask_gray, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
 
     # image
     if key_handler[key.F]:
