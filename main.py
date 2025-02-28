@@ -289,7 +289,7 @@ def update(dt):
         contour_area = cv2.contourArea(gray_contourArea)
 
             # Установите пороговое значение для остановки
-        if contour_area > MAX_CONTOUR_AREA * 0.032 and flags["new_gray_mask"]:  
+        if contour_area > MAX_CONTOUR_AREA * 0.032:
             action -= np.array(CONST_UP_DN_MOVE)
             set_false(turning_states, 'all')
             flags["new_gray_mask"] = False
@@ -308,7 +308,7 @@ def update(dt):
 
     # Получение контуров серой разметки каждый кадр
     mask_gray = get_mask(obs, 'gray')
-    flags["new_gray_mask"] = True
+
     mask_gray[0:300] = 0
     mask_gray[:,0:83] = 0
     mask_gray[:, -83:] = 0
