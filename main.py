@@ -59,9 +59,7 @@ turning_states = {
     'turning_backward': False,
     'turning_forward': False
 }
-flags = {
-    'new_gray_mask': False
-}
+
 
 def get_bot_image(obs):
     global contours
