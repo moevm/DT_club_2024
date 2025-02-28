@@ -36,6 +36,14 @@ if args.env_name and args.env_name.find("Duckietown") != -1:
     )
 else:
     env = gym.make(args.env_name)
+    
+# Create output folder
+if not os.path.exists(output_path):
+    os.makedirs(output_path, exist_ok=True)
+    print(f"Directory created: {output_path}")
+else:
+    print(f"Directory already exists: {output_path}")
+
 
 env.reset()
 env.render()

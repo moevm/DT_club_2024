@@ -3,11 +3,6 @@ import numpy as np
 import os.path
 from src.const import output_path
 
-if not os.path.exists(output_path):
-    os.makedirs(output_path, exist_ok=True)
-    print(f"Directory created: {output_path}")
-else:
-    print(f"Directory already exists: {output_path}")
 
 writer_mask = cv2.VideoWriter(
     output_path + "/output_mask.mp4",
