@@ -1,24 +1,23 @@
 import cv2
 import numpy as np
 import os.path
-from src.const import directory_path
+from src.const import output_path
 
-if not os.path.exists(directory_path): 
-    print("Directory created:", str(os.path.exists(directory_path)))
-    os.makedirs(directory_path, exist_ok=True)
-    print("Directory created: " + str(os.path.exists(directory_path)))
-else: 
-    print("Directory created: " + str(os.path.exists(directory_path)))
+if not os.path.exists(output_path):
+    os.makedirs(output_path, exist_ok=True)
+    print(f"Directory created: {output_path}")
+else:
+    print(f"Directory already exists: {output_path}")
 
 writer_mask = cv2.VideoWriter(
-    directory_path + "/output_mask.mp4",
+    output_path + "/output_mask.mp4",
     cv2.VideoWriter_fourcc(*"mp4v"),
     20,
     (640, 480), # width, height
 )
 
 writer_camera = cv2.VideoWriter(
-    directory_path + "/output.mp4",
+    output_path + "/output.mp4",
     cv2.VideoWriter_fourcc(*"mp4v"),
     20,
     (640, 480), # width, height

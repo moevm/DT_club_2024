@@ -12,4 +12,5 @@ turning_states = {
 RENDER_PARAMS = ['human', 'top_down']
 RENDER_MODE = RENDER_PARAMS[1]
 TAKE_IMAGE = False
-directory_path = "src/output"
+
+output_path = "output/"
