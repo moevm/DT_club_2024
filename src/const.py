@@ -3,6 +3,12 @@ CONST_UP_DN_MOVE= [0.44, 0]
 CONST_LT_RT_MOVE = [0, 1]
 CONST_STOP_MOVE = [0, 0]
 DELTA_ANGLE = 3
+lower_gray = [156, 161, 156]
+upper_gray = [220, 220, 220]
+lower_yellow = [20, 100, 100]
+upper_yellow = [29, 254, 254]
+lower_red = [0, 0, 150]
+upper_red = [100, 100, 255]
 
 # States
 turning_states = {

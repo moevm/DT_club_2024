@@ -3,6 +3,7 @@ import argparse
 import sys
 import gym
 import pyglet
+import os.path
 from pyglet.window import key
 from gym_duckietown.envs import DuckietownEnv
 from src.const import *
