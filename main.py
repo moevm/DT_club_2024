@@ -10,7 +10,6 @@ from src.const import *
 from src.move import *
 from src.image import *
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--env-name", default="Duckietown-udem1-v0")
 parser.add_argument("--map-name", default="udem1")
@@ -38,6 +37,14 @@ if args.env_name and args.env_name.find("Duckietown") != -1:
     )
 else:
     env = gym.make(args.env_name)
+    
+# Create output folder
+if not os.path.exists(output_path):
+    os.makedirs(output_path, exist_ok=True)
+    print(f"Directory created: {output_path}")
+else:
+    print(f"Directory already exists: {output_path}")
+
 
 env.reset()
 env.render()
@@ -47,7 +54,6 @@ def set_false(state_dict, key_to_keep):
         if key != key_to_keep:
             state_dict[key] = False
     return state_dict
-
 
 RENDER_PARAMS = ['human', 'top_down']
 RENDER_MODE = RENDER_PARAMS[1]
@@ -61,9 +67,8 @@ def on_key_press(symbol, modifiers):
     control the simulation
     """
 
-    # RENDER_MODE SWITCH
-    
     global RENDER_MODE
+    
     if symbol == key.TAB:
         RENDER_MODE = RENDER_PARAMS[1] if RENDER_MODE == RENDER_PARAMS[0] else RENDER_PARAMS[0]
 
@@ -81,7 +86,6 @@ def on_key_press(symbol, modifiers):
         turning_states['turning_forward'] = not turning_states['turning_forward']
         set_false(turning_states, 'turning_forward')
     
-    
     if symbol == key.BACKSPACE or symbol == key.SLASH:
         print("RESET")
         env.reset()
@@ -89,12 +93,11 @@ def on_key_press(symbol, modifiers):
     elif symbol == key.PAGEUP:
         env.unwrapped.cam_angle[0] = 0
     elif symbol == key.ESCAPE:
-        writer_mask.release()
         writer_camera.release()
+        writer_mask.release() 
         env.close()
         sys.exit(0)
 
-        
 # Register a keyboard handler
 key_handler = key.KeyStateHandler()
 env.unwrapped.window.push_handlers(key_handler)
@@ -110,7 +113,6 @@ def update(dt):
     action = np.array([0.0, 0.0])
 
     # Movement handling
-
     if key_handler[key.UP] or key_handler[key.W]:
         action += np.array(CONST_UP_DN_MOVE)
     if key_handler[key.DOWN] or key_handler[key.S]:
@@ -153,7 +155,7 @@ def update(dt):
     if key_handler[key.LSHIFT]:
         action *= 1.5
 
-    obs, reward, done, info = env.step(action)
+    obs, reward, done, info = env.step(action) # RGB
     print("step_count = %s, reward=%.3f" % (env.unwrapped.step_count, reward))
     print("bot position = ", env.cur_pos)
 
@@ -191,6 +193,7 @@ def update(dt):
             TAKE_IMAGE = True
     else:
         TAKE_IMAGE = False
+    
     image_bgr = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
     writer_camera.write(image_bgr)
 
@@ -198,7 +201,6 @@ def update(dt):
     writer_mask.write(mask_gray)
     
     env.render(RENDER_MODE)
-
 
 pyglet.clock.schedule_interval(update, 1.0 / env.unwrapped.frame_rate)
 
