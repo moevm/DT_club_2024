@@ -55,6 +55,11 @@ def set_false(state_dict, key_to_keep):
             state_dict[key] = False
     return state_dict
 
+RENDER_PARAMS = ['human', 'top_down']
+RENDER_MODE = RENDER_PARAMS[1]
+TAKE_IMAGE = False
+MAX_CONTOUR_AREA = 307200
+
 @env.unwrapped.window.event
 def on_key_press(symbol, modifiers):
     """
@@ -97,13 +102,14 @@ def on_key_press(symbol, modifiers):
 key_handler = key.KeyStateHandler()
 env.unwrapped.window.push_handlers(key_handler)
 
+
 def update(dt):
     """
     This function is called at every frame to handle
     movement/stepping and redrawing
     """
-    
-    global TAKE_IMAGE
+    global TAKE_IMAGE,contours_gray,contours_yellow, lx, ly, last_steering_angle
+
     action = np.array([0.0, 0.0])
 
     # Movement handling
@@ -132,6 +138,17 @@ def update(dt):
     """
     Here you can set the movement for the duckiebot using action
     """
+
+
+    if contours_gray:
+        gray_contourArea = max(contours_gray, key=cv2.contourArea)
+        contour_area = cv2.contourArea(gray_contourArea)
+
+        # Установите пороговое значение для остановки
+        if contour_area > MAX_CONTOUR_AREA * 0.033:
+            action -= np.array(CONST_UP_DN_MOVE)
+            set_false(turning_states, 'all')
+                     
     action = realistic_move(action)
 
     # Speed boost
@@ -141,6 +158,33 @@ def update(dt):
     obs, reward, done, info = env.step(action) # RGB
     print("step_count = %s, reward=%.3f" % (env.unwrapped.step_count, reward))
     print("bot position = ", env.cur_pos)
+
+    # Получение контуров желтой и серой разметки каждые 8 кадров
+    steps = env.unwrapped.step_count
+    if steps % 8 == 0:
+        mask_gray = get_mask(obs, 'gray')
+        contours_gray, _ = cv2.findContours(image=mask_gray, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
+        print("wwwwwwww")
+        mask_yellow = get_mask(obs, 'yellow')
+        contours_yellow, _ = cv2.findContours(mask_yellow, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    
+    if contours_yellow:
+        filtered_contours = [cnt for cnt in contours_yellow if cv2.contourArea(cnt) > min_contour_area]
+        
+        if filtered_contours:
+            largest_contour = max(contours_yellow, key=cv2.contourArea)
+            M = cv2.moments(largest_contour)
+            if M["m00"] != 0:
+                lx = int(M["m10"] / M["m00"])
+                ly = int(M["m01"] / M["m00"])
+                center_x = image_width / 2
+                deviation = center_x - lx 
+                steering_angle = deviation / center_x
+                obs, _, _, _ = env.step([0.2, steering_angle])
+                last_steering_angle = steering_angle
+    elif last_steering_angle != 0 :
+        obs, _, _, _ = env.step([0.2, last_steering_angle])
 
     # image
     if key_handler[key.F]:
