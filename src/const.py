@@ -18,6 +18,7 @@ image_height = 480
 MAX_CONTOUR_AREA = 640 * 480
 min_contour_area = 10
 last_steering_angle = 0
+TAKE_IMAGE = False
 
 # States
 turning_states = {

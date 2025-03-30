@@ -55,10 +55,7 @@ def set_false(state_dict, key_to_keep):
             state_dict[key] = False
     return state_dict
 
-RENDER_PARAMS = ['human', 'top_down']
-RENDER_MODE = RENDER_PARAMS[1]
-TAKE_IMAGE = False
-MAX_CONTOUR_AREA = 307200
+
 
 @env.unwrapped.window.event
 def on_key_press(symbol, modifiers):
