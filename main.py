@@ -10,7 +10,6 @@ from src.const import *
 from src.move import *
 from src.image import *
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--env-name", default="Duckietown-udem1-v0")
 parser.add_argument("--map-name", default="udem1")
@@ -38,6 +37,14 @@ if args.env_name and args.env_name.find("Duckietown") != -1:
     )
 else:
     env = gym.make(args.env_name)
+    
+# Create output folder
+if not os.path.exists(output_path):
+    os.makedirs(output_path, exist_ok=True)
+    print(f"Directory created: {output_path}")
+else:
+    print(f"Directory already exists: {output_path}")
+
 
 env.reset()
 env.render()
@@ -47,7 +54,6 @@ def set_false(state_dict, key_to_keep):
         if key != key_to_keep:
             state_dict[key] = False
     return state_dict
-
 
 RENDER_PARAMS = ['human', 'top_down']
 RENDER_MODE = RENDER_PARAMS[1]
@@ -61,9 +67,8 @@ def on_key_press(symbol, modifiers):
     control the simulation
     """
 
-    # RENDER_MODE SWITCH
-    
     global RENDER_MODE
+    
     if symbol == key.TAB:
         RENDER_MODE = RENDER_PARAMS[1] if RENDER_MODE == RENDER_PARAMS[0] else RENDER_PARAMS[0]
 
@@ -81,7 +86,6 @@ def on_key_press(symbol, modifiers):
         turning_states['turning_forward'] = not turning_states['turning_forward']
         set_false(turning_states, 'turning_forward')
     
-    
     if symbol == key.BACKSPACE or symbol == key.SLASH:
         print("RESET")
         env.reset()
@@ -89,12 +93,11 @@ def on_key_press(symbol, modifiers):
     elif symbol == key.PAGEUP:
         env.unwrapped.cam_angle[0] = 0
     elif symbol == key.ESCAPE:
-        writer_mask.release()
         writer_camera.release()
+        writer_mask.release() 
         env.close()
         sys.exit(0)
 
-        
 # Register a keyboard handler
 key_handler = key.KeyStateHandler()
 env.unwrapped.window.push_handlers(key_handler)
@@ -105,12 +108,11 @@ def update(dt):
     This function is called at every frame to handle
     movement/stepping and redrawing
     """
-    global TAKE_IMAGE,contours_gray,contours_yellow, lx, ly, last_steering_angle
+    global TAKE_IMAGE,contours_gray_for_stop,contours_gray_for_move,contours_yellow, lx_y, lx_g, last_steering_angle
 
     action = np.array([0.0, 0.0])
 
     # Movement handling
-
     if key_handler[key.UP] or key_handler[key.W]:
         action += np.array(CONST_UP_DN_MOVE)
     if key_handler[key.DOWN] or key_handler[key.S]:
@@ -138,12 +140,11 @@ def update(dt):
     """
 
 
-    if contours_gray:
-        gray_contourArea = max(contours_gray, key=cv2.contourArea)
+    if contours_gray_for_stop:
+        gray_contourArea = max(contours_gray_for_stop, key=cv2.contourArea)
         contour_area = cv2.contourArea(gray_contourArea)
 
-        # Установите пороговое значение для остановки
-        if contour_area > MAX_CONTOUR_AREA * 0.033:
+        if contour_area > MAX_CONTOUR_AREA // 33:
             action -= np.array(CONST_UP_DN_MOVE)
             set_false(turning_states, 'all')
                      
@@ -153,37 +154,57 @@ def update(dt):
     if key_handler[key.LSHIFT]:
         action *= 1.5
 
-    obs, reward, done, info = env.step(action)
+    obs, reward, done, info = env.step(action) # RGB
     print("step_count = %s, reward=%.3f" % (env.unwrapped.step_count, reward))
     print("bot position = ", env.cur_pos)
 
     # Получение контуров желтой и серой разметки каждые 8 кадров
     steps = env.unwrapped.step_count
-    if steps % 8 == 0:
-        mask_gray = get_mask(obs, 'gray')
-        contours_gray, _ = cv2.findContours(image=mask_gray, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
-        print("wwwwwwww")
+    if steps % 6 == 0:
+        mask_gray_for_move, mask_gray_for_stop = get_mask(obs, 'gray')
+        contours_gray_for_move, _ = cv2.findContours(image=mask_gray_for_move, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
+        contours_gray_for_stop, _ = cv2.findContours(image=mask_gray_for_stop, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
+
+
         mask_yellow = get_mask(obs, 'yellow')
         contours_yellow, _ = cv2.findContours(mask_yellow, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     
-    if contours_yellow:
-        filtered_contours = [cnt for cnt in contours_yellow if cv2.contourArea(cnt) > min_contour_area]
+    if contours_yellow and contours_gray_for_move:
+        filtered_contours_yellow = [cnt for cnt in contours_yellow if cv2.contourArea(cnt) > min_contour_area]
+        filtered_contours_gray = [cnt for cnt in contours_gray_for_move if cv2.contourArea(cnt) > min_contour_area]
         
-        if filtered_contours:
-            largest_contour = max(contours_yellow, key=cv2.contourArea)
-            M = cv2.moments(largest_contour)
-            if M["m00"] != 0:
-                lx = int(M["m10"] / M["m00"])
-                ly = int(M["m01"] / M["m00"])
-                center_x = image_width / 2
-                deviation = center_x - lx 
-                steering_angle = deviation / center_x
+        if filtered_contours_yellow and filtered_contours_gray:
+            largest_contour_yellow = max(filtered_contours_yellow, key=cv2.contourArea)
+            largest_contour_gray = max(filtered_contours_gray, key=cv2.contourArea)
+            
+            # Вычисляем моменты ж и с линий 
+            M_Y = cv2.moments(largest_contour_yellow)
+            M_G = cv2.moments(largest_contour_gray)
+            
+            if M_Y["m00"] != 0 and M_G["m00"] != 0:
+                lx_y, lx_g= int(M_Y["m10"] / M_Y["m00"]), int(M_G["m10"] / M_G["m00"]) # X-координата ж и с линий
+                
+                # Центр между двумя линиями 
+                center_between_lines = (lx_y + lx_g) / 2
+
+                image_center = image_width / 2
+                
+                # насколько смещены от центра
+                delta_centre = center_between_lines - image_center
+
+                # Чем больше, тем резче повороты
+                Kp = 0.02
+                
+                # минус, чтобы поворачиваться в нужню сторону
+                steering_angle = -Kp * delta_centre
+                
                 obs, _, _, _ = env.step([0.2, steering_angle])
-                last_steering_angle = steering_angle
+                last_steering_angle = steering_angle  # Запоминаем угол
+
     elif last_steering_angle != 0 :
         obs, _, _, _ = env.step([0.2, last_steering_angle])
-
+                
     # image
     if key_handler[key.F]:
         if not TAKE_IMAGE:
@@ -191,14 +212,14 @@ def update(dt):
             TAKE_IMAGE = True
     else:
         TAKE_IMAGE = False
+    
     image_bgr = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
     writer_camera.write(image_bgr)
 
-    mask_gray = get_mask(obs, 'gray')  # запись маски 'gray' / 'yellow'
+    _, mask_gray = get_mask(obs, 'gray')  # запись маски 'gray' / 'yellow'
     writer_mask.write(mask_gray)
     
     env.render(RENDER_MODE)
-
 
 pyglet.clock.schedule_interval(update, 1.0 / env.unwrapped.frame_rate)
 
