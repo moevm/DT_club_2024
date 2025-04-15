@@ -9,6 +9,7 @@ from gym_duckietown.envs import DuckietownEnv
 from src.const import *
 from src.move import *
 from src.image import *
+import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--env-name", default="Duckietown-udem1-v0")
@@ -55,10 +56,7 @@ def set_false(state_dict, key_to_keep):
             state_dict[key] = False
     return state_dict
 
-RENDER_PARAMS = ['human', 'top_down']
-RENDER_MODE = RENDER_PARAMS[1]
-TAKE_IMAGE = False
-MAX_CONTOUR_AREA = 307200
+
 
 @env.unwrapped.window.event
 def on_key_press(symbol, modifiers):
@@ -67,7 +65,7 @@ def on_key_press(symbol, modifiers):
     control the simulation
     """
 
-    global RENDER_MODE
+    global RENDER_MODE, Enable_Movement
     
     if symbol == key.TAB:
         RENDER_MODE = RENDER_PARAMS[1] if RENDER_MODE == RENDER_PARAMS[0] else RENDER_PARAMS[0]
@@ -90,6 +88,8 @@ def on_key_press(symbol, modifiers):
         print("RESET")
         env.reset()
         env.render()
+    if symbol == key.G:
+        Enable_Movement = not Enable_Movement
     elif symbol == key.PAGEUP:
         env.unwrapped.cam_angle[0] = 0
     elif symbol == key.ESCAPE:
@@ -108,7 +108,7 @@ def update(dt):
     This function is called at every frame to handle
     movement/stepping and redrawing
     """
-    global TAKE_IMAGE,contours_gray_for_stop,contours_gray_for_move,contours_yellow, lx_y, lx_g, last_steering_angle
+    global TAKE_IMAGE,contours_gray_for_stop,contours_gray_for_move,contours_yellow, lx_y, lx_g, last_steering_angle,Enable_Movement,count_stop_time,count_move_time
 
     action = np.array([0.0, 0.0])
 
@@ -153,58 +153,84 @@ def update(dt):
     # Speed boost
     if key_handler[key.LSHIFT]:
         action *= 1.5
+    
+
+    if count_stop_time > 40:
+        action += np.array(UP_MOVE)
+        count_move_time += 1
+
+        if count_move_time % 5 == 0:
+            UP_MOVE[0] = UP_MOVE[0] * 1.01
+        elif count_move_time > 115:
+            count_stop_time = 0
+            count_move_time = 0
+            UP_MOVE[0] = 0.25
 
     obs, reward, done, info = env.step(action) # RGB
     print("step_count = %s, reward=%.3f" % (env.unwrapped.step_count, reward))
     print("bot position = ", env.cur_pos)
+    if count_stop_time <= 40:
 
-    # Получение контуров желтой и серой разметки каждые 8 кадров
-    steps = env.unwrapped.step_count
-    if steps % 6 == 0:
-        mask_gray_for_move, mask_gray_for_stop = get_mask(obs, 'gray')
-        contours_gray_for_move, _ = cv2.findContours(image=mask_gray_for_move, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
-        contours_gray_for_stop, _ = cv2.findContours(image=mask_gray_for_stop, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
+        if Enable_Movement:
+            # Получение контуров желтой и серой разметки каждые 6 кадров
+            steps = env.unwrapped.step_count
+            if steps % 6 == 0:
+                mask_gray_for_move, mask_gray_for_stop = get_mask(obs, 'gray')
+                contours_gray_for_move, _ = cv2.findContours(image=mask_gray_for_move, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
+                contours_gray_for_stop, _ = cv2.findContours(image=mask_gray_for_stop, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
 
+                last_action = action
+                mask_yellow = get_mask(obs, 'yellow')
+                contours_yellow, _ = cv2.findContours(mask_yellow, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        mask_yellow = get_mask(obs, 'yellow')
-        contours_yellow, _ = cv2.findContours(mask_yellow, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            if contours_yellow and contours_gray_for_move:
+                filtered_contours_yellow = [cnt for cnt in contours_yellow if cv2.contourArea(cnt) > min_contour_area]
+                filtered_contours_gray = [cnt for cnt in contours_gray_for_move if cv2.contourArea(cnt) > min_contour_area]
+                
+                if filtered_contours_yellow and filtered_contours_gray:
+                    largest_contour_yellow = max(filtered_contours_yellow, key=cv2.contourArea)
+                    largest_contour_gray = max(filtered_contours_gray, key=cv2.contourArea)
+                    
+                    # Вычисляем моменты ж и с линий 
+                    M_Y = cv2.moments(largest_contour_yellow)
+                    M_G = cv2.moments(largest_contour_gray)
+                    
+                    if M_Y["m00"] != 0 and M_G["m00"] != 0:
+                        lx_y, lx_g= int(M_Y["m10"] / M_Y["m00"]), int(M_G["m10"] / M_G["m00"]) # X-координата ж и с линий
+                        
+                        # Центр между двумя линиями 
+                        center_between_lines = (lx_y + lx_g) / 2
 
-    
-    if contours_yellow and contours_gray_for_move:
-        filtered_contours_yellow = [cnt for cnt in contours_yellow if cv2.contourArea(cnt) > min_contour_area]
-        filtered_contours_gray = [cnt for cnt in contours_gray_for_move if cv2.contourArea(cnt) > min_contour_area]
+                        image_center = image_width / 2
+                        
+                        # насколько смещены от центра
+                        delta_centre = center_between_lines - image_center
+
+                        # Чем больше, тем резче повороты
+                        Kp = 0.02
+                        
+                        # минус, чтобы поворачиваться в нужню сторону
+                        steering_angle = -Kp * delta_centre
+                        action = np.array([0.2, steering_angle])
+                        obs, _, _, _ = env.step(action)
+                        last_steering_angle = steering_angle  # Запоминаем угол
+
+            elif last_steering_angle != 0 :
+                action = np.array([0.2, last_steering_angle])
+                obs, _, _, _ = env.step(action)
         
-        if filtered_contours_yellow and filtered_contours_gray:
-            largest_contour_yellow = max(filtered_contours_yellow, key=cv2.contourArea)
-            largest_contour_gray = max(filtered_contours_gray, key=cv2.contourArea)
-            
-            # Вычисляем моменты ж и с линий 
-            M_Y = cv2.moments(largest_contour_yellow)
-            M_G = cv2.moments(largest_contour_gray)
-            
-            if M_Y["m00"] != 0 and M_G["m00"] != 0:
-                lx_y, lx_g= int(M_Y["m10"] / M_Y["m00"]), int(M_G["m10"] / M_G["m00"]) # X-координата ж и с линий
-                
-                # Центр между двумя линиями 
-                center_between_lines = (lx_y + lx_g) / 2
+        if action[0] == 0 and action[1] == 0 and Enable_Movement:
+            count_stop_time += 1
 
-                image_center = image_width / 2
-                
-                # насколько смещены от центра
-                delta_centre = center_between_lines - image_center
+        else:
+            count_stop_time = 0 
 
-                # Чем больше, тем резче повороты
-                Kp = 0.02
-                
-                # минус, чтобы поворачиваться в нужню сторону
-                steering_angle = -Kp * delta_centre
-                
-                obs, _, _, _ = env.step([0.2, steering_angle])
-                last_steering_angle = steering_angle  # Запоминаем угол
+          
 
-    elif last_steering_angle != 0 :
-        obs, _, _, _ = env.step([0.2, last_steering_angle])
-                
+
+        
+                    
     # image
     if key_handler[key.F]:
         if not TAKE_IMAGE:
