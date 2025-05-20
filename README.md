@@ -42,7 +42,6 @@ todo
 
 ## Участники проекта
 
-<!-- readme: contributors -start -->
 <table>
 	<tbody>
 		<tr>
@@ -64,10 +63,24 @@ todo
                 <a href="https://github.com/LeoKaplin">
                     <img src="https://avatars.githubusercontent.com/u/193319443?v=4" width="100;" alt="LeoKaplin"/>
                     <br />
-                    <sub><b>LeoKaplin</b></sub>
+                    <sub><b>Leonid Kaplin</b></sub>
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/beast1033">
+                    <img src="https://avatars.githubusercontent.com/u/205336709?v=4" width="100;" alt="beast1033"/>
+                    <br />
+                    <sub><b>Igor Melekhin</b></sub>
+                </a>
+            </td>
+	    <td align="center">
+                <a href="https://github.com/ShrekKing">
+                    <img src="https://avatars.githubusercontent.com/u/207341529?v=4" width="100;" alt="beast1033"/>
+                    <br />
+                    <sub><b>Sergej Vinarskij</b></sub>
+                </a>
+            </td>
+	    <td align="center">
                 <a href="https://github.com/vitalina-v-v">
                     <img src="https://avatars.githubusercontent.com/u/193338211?v=4" width="100;" alt="vitalina-v-v"/>
                     <br />
@@ -78,10 +91,9 @@ todo
                 <a href="https://github.com/KonstantinKondratenko">
                     <img src="https://avatars.githubusercontent.com/u/90711883?v=4" width="100;" alt="KonstantinKondratenko"/>
                     <br />
-                    <sub><b>Konstantin Evgenievich Kondratenko</b></sub>
+                    <sub><b>Konstantin Kondratenko</b></sub>
                 </a>
             </td>
 		</tr>
 	<tbody>
 </table>
-<!-- readme: contributors -end -->
