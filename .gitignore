@@ -7,11 +7,12 @@ __pycache__/
 *.so
 
 # Video and images
-*.mp4
-*.mov
-*.jpg
-*.jpeg
-*.png
+# *.mp4
+# *.mov
+# *.jpg
+# *.jpeg
+# *.png
+output/
 
 # Distribution / packaging
 .Python
