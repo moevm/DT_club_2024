@@ -39,3 +39,8 @@ python3 main.py
 
 ## Демонстрация работы
 todo
+
+## Участники проекта
+
+<!-- readme: contributors -start -->
+<!-- readme: contributors -end -->
