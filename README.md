@@ -43,4 +43,45 @@ todo
 ## Участники проекта
 
 <!-- readme: contributors -start -->
+<table>
+	<tbody>
+		<tr>
+            <td align="center">
+                <a href="https://github.com/AlexanderKamynin">
+                    <img src="https://avatars.githubusercontent.com/u/90709676?v=4" width="100;" alt="AlexanderKamynin"/>
+                    <br />
+                    <sub><b>Alexander Kamynin</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/rooney7L">
+                    <img src="https://avatars.githubusercontent.com/u/193333856?v=4" width="100;" alt="rooney7L"/>
+                    <br />
+                    <sub><b>rooney7L</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/LeoKaplin">
+                    <img src="https://avatars.githubusercontent.com/u/193319443?v=4" width="100;" alt="LeoKaplin"/>
+                    <br />
+                    <sub><b>LeoKaplin</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/vitalina-v-v">
+                    <img src="https://avatars.githubusercontent.com/u/193338211?v=4" width="100;" alt="vitalina-v-v"/>
+                    <br />
+                    <sub><b>vitalina</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/KonstantinKondratenko">
+                    <img src="https://avatars.githubusercontent.com/u/90711883?v=4" width="100;" alt="KonstantinKondratenko"/>
+                    <br />
+                    <sub><b>Konstantin Evgenievich Kondratenko</b></sub>
+                </a>
+            </td>
+		</tr>
+	<tbody>
+</table>
 <!-- readme: contributors -end -->
